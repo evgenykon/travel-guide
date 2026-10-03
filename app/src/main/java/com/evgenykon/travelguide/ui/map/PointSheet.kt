@@ -1,6 +1,5 @@
 package com.evgenykon.travelguide.ui.map
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,11 +45,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.util.MapPoi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -74,7 +75,16 @@ fun PointSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+
+    var statusMessage by remember { mutableStateOf<String?>(null) }
+    var statusIsError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(statusMessage) {
+        if (statusMessage != null && !statusIsError) {
+            delay(4_000)
+            statusMessage = null
+        }
+    }
 
     val lat = point?.lat ?: createRequest?.lat ?: 0.0
     val lng = point?.lng ?: createRequest?.lng ?: 0.0
@@ -164,26 +174,34 @@ fun PointSheet(
                     .heightIn(min = 120.dp)
             )
 
+            statusMessage?.let { message ->
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (statusIsError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        Color(0xFF2E7D32)
+                    }
+                )
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {
                         generating = true
+                        statusMessage = null
                         scope.launch {
                             onGenerate(name, address, lat, lng, description, poi)
                                 .onSuccess {
                                     description = it
-                                    Toast.makeText(
-                                        context,
-                                        "Описание сгенерировано",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    statusIsError = false
+                                    statusMessage = "Описание сгенерировано"
                                 }
                                 .onFailure {
-                                    Toast.makeText(
-                                        context,
-                                        "Ошибка генерации: ${it.message ?: "неизвестная"}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                    statusIsError = true
+                                    statusMessage =
+                                        "Ошибка генерации: ${it.message ?: "неизвестная"}"
                                 }
                             generating = false
                         }
@@ -201,14 +219,13 @@ fun PointSheet(
                 OutlinedButton(
                     onClick = {
                         speaking = true
+                        statusMessage = null
                         scope.launch {
                             onSpeak(description)
                                 .onFailure {
-                                    Toast.makeText(
-                                        context,
-                                        "Ошибка озвучки: ${it.message ?: "неизвестная"}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                    statusIsError = true
+                                    statusMessage =
+                                        "Ошибка озвучки: ${it.message ?: "неизвестная"}"
                                 }
                             speaking = false
                         }
