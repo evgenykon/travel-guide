@@ -1,5 +1,6 @@
 package com.evgenykon.travelguide.auth
 
+import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.SignedJWT
 import org.junit.Assert.assertEquals
@@ -35,11 +36,13 @@ class YandexJwtTest {
         val parsed = SignedJWT.parse(jwt)
 
         assertTrue(parsed.verify(RSASSAVerifier(keyPair.public as RSAPublicKey)))
+        assertEquals(JWSAlgorithm.PS256, parsed.header.algorithm)
         assertEquals("key-id-1", parsed.header.keyID)
         assertEquals("sa-id-1", parsed.jwtClaimsSet.issuer)
         assertEquals(listOf(IAM_TOKEN_AUDIENCE), parsed.jwtClaimsSet.audience)
-        assertEquals(1_700_000_000_000L, parsed.jwtClaimsSet.issueTime.time)
-        assertEquals(1_700_003_600_000L, parsed.jwtClaimsSet.expirationTime.time)
+        assertEquals(1_700_000_000_000L - 60_000L, parsed.jwtClaimsSet.issueTime.time)
+        assertEquals(1_700_003_600_000L - 60_000L, parsed.jwtClaimsSet.expirationTime.time)
+        assertEquals(3600L, parsed.jwtClaimsSet.expirationTime.time - parsed.jwtClaimsSet.issueTime.time)
     }
 
     @Test

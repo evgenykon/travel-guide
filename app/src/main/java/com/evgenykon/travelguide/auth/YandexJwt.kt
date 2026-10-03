@@ -25,6 +25,8 @@ data class YandexSaKeyJson(
 
 object YandexJwt {
 
+    private const val CLOCK_SKEW_MS = 60_000L
+
     private val json = Json { ignoreUnknownKeys = true }
 
     fun parseKey(keyJson: String): YandexSaKeyJson {
@@ -41,14 +43,14 @@ object YandexJwt {
         ttlSeconds: Long = 3600
     ): String {
         val privateKey = parsePrivateKey(key.privateKey)
-        val header = JWSHeader.Builder(JWSAlgorithm.RS256)
+        val header = JWSHeader.Builder(JWSAlgorithm.PS256)
             .keyID(key.id)
             .build()
         val claims = JWTClaimsSet.Builder()
             .audience(IAM_TOKEN_AUDIENCE)
             .issuer(key.serviceAccountId)
-            .issueTime(Date(nowMs))
-            .expirationTime(Date(nowMs + ttlSeconds * 1000))
+            .issueTime(Date(nowMs - CLOCK_SKEW_MS))
+            .expirationTime(Date(nowMs + ttlSeconds * 1000 - CLOCK_SKEW_MS))
             .build()
         val jwt = SignedJWT(header, claims)
         jwt.sign(RSASSASigner(privateKey))

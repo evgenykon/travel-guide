@@ -4,6 +4,7 @@ import android.content.Context
 import com.evgenykon.travelguide.auth.YandexAuthManager
 import com.evgenykon.travelguide.network.VoiceDto
 import com.evgenykon.travelguide.network.YandexTtsApi
+import com.evgenykon.travelguide.network.responseDetails
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
@@ -71,9 +72,24 @@ class TtsRepository(
         } catch (e: HttpException) {
             if (e.code() == 401) {
                 val fresh = iamToken(forceRefresh = true)
-                api.synthesize("Bearer $fresh", text = text, voice = voice, speed = formatSpeed(speed))
+                try {
+                    api.synthesize(
+                        "Bearer $fresh",
+                        text = text,
+                        voice = voice,
+                        speed = formatSpeed(speed)
+                    )
+                } catch (retry: HttpException) {
+                    throw IllegalStateException(
+                        "Yandex TTS отклонил запрос (HTTP ${retry.code()})${retry.responseDetails()}",
+                        retry
+                    )
+                }
             } else {
-                throw e
+                throw IllegalStateException(
+                    "Yandex TTS: HTTP ${e.code()}${e.responseDetails()}",
+                    e
+                )
             }
         }
     }
