@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -31,25 +30,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.util.MapPoi
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,11 +62,12 @@ fun PointSheet(
     pendingRouteId: Long?,
     isVisited: Boolean,
     suggestedPoi: MapPoi?,
+    address: String?,
     onRadiusPreview: (Double) -> Unit,
     onDismiss: () -> Unit,
     onSave: (PointEntity) -> Unit,
     onDelete: (PointEntity) -> Unit,
-    onGenerate: suspend (name: String, lat: Double, lng: Double, hint: String, poi: MapPoi?) -> Result<String>,
+    onGenerate: suspend (name: String, address: String?, lat: Double, lng: Double, hint: String, poi: MapPoi?) -> Result<String>,
     onSpeak: suspend (String) -> Result<Unit>,
     onMessage: (String) -> Unit
 ) {
@@ -81,7 +83,9 @@ fun PointSheet(
     }
     var description by remember(point?.id, createRequest) { mutableStateOf(point?.description ?: "") }
     var enabled by remember(point?.id, createRequest) { mutableStateOf(point?.enabled ?: true) }
-    var radius by remember(point?.id, createRequest) { mutableStateOf(initialRadius.toString()) }
+    var radiusMeters by remember(point?.id, createRequest) {
+        mutableFloatStateOf(initialRadius.toFloat().coerceIn(5f, 100f))
+    }
     var routeId by remember(point?.id, createRequest) {
         mutableStateOf(point?.routeId ?: pendingRouteId)
     }
@@ -109,6 +113,14 @@ fun PointSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (!address.isNullOrBlank()) {
+                Text(
+                    "Адрес: $address",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (isVisited) {
                 Text(
@@ -155,7 +167,7 @@ fun PointSheet(
                     onClick = {
                         generating = true
                         scope.launch {
-                            onGenerate(name, lat, lng, description, poi)
+                            onGenerate(name, address, lat, lng, description, poi)
                                 .onSuccess { description = it }
                                 .onFailure { onMessage(it.message ?: "Не удалось сгенерировать описание") }
                             generating = false
@@ -192,17 +204,18 @@ fun PointSheet(
                 }
             }
 
-            OutlinedTextField(
-                value = radius,
-                onValueChange = { input ->
-                    radius = input.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }
-                    radius.replace(',', '.').toDoubleOrNull()?.let { onRadiusPreview(it) }
-                },
-                label = { Text("Радиус озвучки, м") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            Column {
+                Text("Радиус срабатывания: ${radiusMeters.roundToInt()} м")
+                Slider(
+                    value = radiusMeters,
+                    onValueChange = {
+                        radiusMeters = it
+                        onRadiusPreview(it.toDouble())
+                    },
+                    valueRange = 5f..100f,
+                    steps = 18
+                )
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Активна для слежения")
@@ -250,7 +263,6 @@ fun PointSheet(
                 Spacer(Modifier.weight(1f))
                 Button(
                     onClick = {
-                        val parsedRadius = radius.replace(',', '.').toDoubleOrNull()
                         onSave(
                             PointEntity(
                                 id = point?.id ?: 0L,
@@ -260,7 +272,7 @@ fun PointSheet(
                                 lng = lng,
                                 description = description.trim(),
                                 enabled = enabled,
-                                radiusMeters = (parsedRadius ?: initialRadius).coerceIn(5.0, 100.0),
+                                radiusMeters = radiusMeters.toDouble().coerceIn(5.0, 100.0),
                                 createdAt = point?.createdAt ?: System.currentTimeMillis()
                             )
                         )

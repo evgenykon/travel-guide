@@ -59,6 +59,9 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     private val elevationLoadingState = MutableStateFlow(false)
     val elevationLoading: StateFlow<Boolean> = elevationLoadingState.asStateFlow()
 
+    private val addressState = MutableStateFlow<String?>(null)
+    val address: StateFlow<String?> = addressState.asStateFlow()
+
     private val sheetOpenState = MutableStateFlow(false)
     val sheetOpen: StateFlow<Boolean> = sheetOpenState.asStateFlow()
 
@@ -74,6 +77,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
         selectedPointId.value = id
         selectedPoiState.value = poi
         selectedElevationState.value = null
+        addressState.value = null
         val point = id?.let { pointId -> points.value.firstOrNull { it.id == pointId } }
         if (point == null) {
             sheetOpenState.value = false
@@ -84,6 +88,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
             selectedElevationState.value =
                 container.elevationRepository.elevation(point.lat, point.lng)
             elevationLoadingState.value = false
+            addressState.value = container.addressRepository.address(point.lat, point.lng)
         }
     }
 
@@ -100,8 +105,12 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     fun startCreate(lat: Double, lng: Double, poi: MapPoi? = null) {
         selectedPointId.value = null
         selectedPoiState.value = null
+        addressState.value = null
         sheetOpenState.value = false
         createRequestState.value = CreateRequest(lat, lng, poi)
+        viewModelScope.launch {
+            addressState.value = container.addressRepository.address(lat, lng)
+        }
     }
 
     fun cancelCreate() {
@@ -143,6 +152,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     suspend fun generateDescription(
         name: String,
+        address: String?,
         lat: Double,
         lng: Double,
         hint: String,
@@ -153,6 +163,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
             model = current.model,
             promptTemplate = current.promptTemplate,
             name = name,
+            address = address,
             lat = lat,
             lng = lng,
             hint = hint,

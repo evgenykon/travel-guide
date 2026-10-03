@@ -413,8 +413,9 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     mutableStateOf(settings.promptTemplate)
                 }
                 Text(
-                    "Подстановки: {name} — название точки, {lat}/{lng} — координаты, " +
+                    "Подстановки: {name} — название точки, {address} — улица и дом, " +
                         "{object} — объект OSM под точкой, {hint} — текст поля «Описание». " +
+                        "Также доступны {lat} и {lng}. " +
                         "Системная роль («экскурсовод, только достоверные факты») задана приложением.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

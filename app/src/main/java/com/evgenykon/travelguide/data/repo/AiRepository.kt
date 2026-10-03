@@ -34,6 +34,7 @@ class AiRepository(
         model: String,
         promptTemplate: String,
         name: String,
+        address: String?,
         lat: Double,
         lng: Double,
         hint: String,
@@ -43,6 +44,7 @@ class AiRepository(
         val prompt = PromptBuilder.build(
             template = promptTemplate,
             name = name,
+            address = address,
             lat = lat,
             lng = lng,
             hint = hint,
@@ -56,6 +58,7 @@ class AiRepository(
                     ChatMessage("system", SYSTEM_PROMPT),
                     ChatMessage("user", prompt)
                 ),
+                temperature = 0.3,
                 maxTokens = 900
             )
         )
@@ -68,6 +71,7 @@ class AiRepository(
     private companion object {
         const val SYSTEM_PROMPT =
             "Ты — опытный экскурсовод и составитель путеводителей. " +
-                "Пишешь только достоверные факты и не выдумываешь."
+                "Используешь только проверенные факты. Категорически запрещено выдумывать " +
+                "имена, даты, события и связи; при отсутствии достоверных данных факт не упоминается."
     }
 }

@@ -8,6 +8,7 @@ object PromptBuilder {
     fun build(
         template: String,
         name: String,
+        address: String?,
         lat: Double,
         lng: Double,
         hint: String,
@@ -18,6 +19,7 @@ object PromptBuilder {
             .orEmpty()
         return template
             .replace("{name}", name.ifBlank { "—" })
+            .replace("{address}", address?.takeIf { it.isNotBlank() } ?: "—")
             .replace("{lat}", String.format(Locale.US, "%.5f", lat))
             .replace("{lng}", String.format(Locale.US, "%.5f", lng))
             .replace("{object}", objectText.ifBlank { "—" })

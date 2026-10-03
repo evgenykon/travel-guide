@@ -17,6 +17,12 @@ class Network {
     }
 
     private val client = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "EffTravelGuide/1.0 (Android; OSM data)")
+                .build()
+            chain.proceed(request)
+        }
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
         .writeTimeout(90, TimeUnit.SECONDS)
@@ -41,4 +47,7 @@ class Network {
 
     val openMeteoApi: OpenMeteoApi =
         retrofit("https://api.open-meteo.com/").create(OpenMeteoApi::class.java)
+
+    val nominatimApi: NominatimApi =
+        retrofit("https://nominatim.openstreetmap.org/").create(NominatimApi::class.java)
 }

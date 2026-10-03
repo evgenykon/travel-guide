@@ -76,6 +76,21 @@ data class ElevationResponse(
 )
 
 @Serializable
+data class NominatimResponse(
+    @SerialName("display_name") val displayName: String? = null,
+    val address: NominatimAddress? = null
+)
+
+@Serializable
+data class NominatimAddress(
+    val road: String? = null,
+    @SerialName("house_number") val houseNumber: String? = null,
+    val city: String? = null,
+    val town: String? = null,
+    val village: String? = null
+)
+
+@Serializable
 data class VoiceDto(
     val name: String,
     val gender: String? = null,

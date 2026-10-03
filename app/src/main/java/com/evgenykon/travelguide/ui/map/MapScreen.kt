@@ -116,6 +116,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
     val selectedPoi by vm.selectedPoi.collectAsStateWithLifecycle()
     val selectedElevation by vm.selectedElevation.collectAsStateWithLifecycle()
     val elevationLoading by vm.elevationLoading.collectAsStateWithLifecycle()
+    val address by vm.address.collectAsStateWithLifecycle()
     val createRequest by vm.createRequest.collectAsStateWithLifecycle()
     val previewRadius by vm.previewRadius.collectAsStateWithLifecycle()
     val sheetOpen by vm.sheetOpen.collectAsStateWithLifecycle()
@@ -163,6 +164,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleRef by remember { mutableStateOf<Style?>(null) }
     var mapReady by remember { mutableStateOf(false) }
+    var centeredOnUser by remember { mutableStateOf(false) }
 
     val styleUrl = settings.styleUrl
 
@@ -186,6 +188,17 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 .target(DEFAULT_TARGET)
                 .zoom(10.0)
                 .build()
+            if (context.hasLocationPermission()) {
+                container.locationProvider.lastLocation().addOnSuccessListener { location ->
+                    if (location != null && !centeredOnUser) {
+                        centeredOnUser = true
+                        map.cameraPosition = CameraPosition.Builder()
+                            .target(LatLng(location.latitude, location.longitude))
+                            .zoom(15.0)
+                            .build()
+                    }
+                }
+            }
             map.uiSettings.isAttributionEnabled = true
             map.uiSettings.isCompassEnabled = true
             map.addOnMapClickListener { latLng ->
@@ -258,6 +271,17 @@ fun MapScreen(container: AppContainer, navController: NavController) {
             )
         }
         style.getSourceAs<GeoJsonSource>(SOURCE_USER)?.setGeoJson(collection)
+
+        if (location != null && !centeredOnUser) {
+            centeredOnUser = true
+            mapRef?.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(location.first, location.second),
+                    15.0
+                ),
+                600
+            )
+        }
     }
 
     LaunchedEffect(mapReady, selectedPoint?.id) {
@@ -304,45 +328,49 @@ fun MapScreen(container: AppContainer, navController: NavController) {
         }
     }
 
+    val calloutVisible = selectedPoint != null && createRequest == null && !sheetOpen
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        val target = vm.userLocation.value
-                            ?.let { LatLng(it.first, it.second) }
-                            ?: mapRef?.cameraPosition?.target
-                        if (target != null) {
-                            vm.startCreate(
-                                target.latitude,
-                                target.longitude,
-                                mapRef?.let { queryPoi(it, target) }
-                            )
-                        } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    "Нажмите и удерживайте карту, чтобы поставить точку"
+            if (!calloutVisible) {
+                Column(horizontalAlignment = Alignment.End) {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            val target = vm.userLocation.value
+                                ?.let { LatLng(it.first, it.second) }
+                                ?: mapRef?.cameraPosition?.target
+                            if (target != null) {
+                                vm.startCreate(
+                                    target.latitude,
+                                    target.longitude,
+                                    mapRef?.let { queryPoi(it, target) }
                                 )
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        "Нажмите и удерживайте карту, чтобы поставить точку"
+                                    )
+                                }
+                            }
+                        },
+                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                        text = { Text("Точка") }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    FloatingActionButton(
+                        onClick = {
+                            val location = vm.userLocation.value
+                            if (location != null) {
+                                mapRef?.cameraPosition = CameraPosition.Builder()
+                                    .target(LatLng(location.first, location.second))
+                                    .zoom(17.0)
+                                    .build()
                             }
                         }
-                    },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Точка") }
-                )
-                Spacer(Modifier.height(8.dp))
-                FloatingActionButton(
-                    onClick = {
-                        val location = vm.userLocation.value
-                        if (location != null) {
-                            mapRef?.cameraPosition = CameraPosition.Builder()
-                                .target(LatLng(location.first, location.second))
-                                .zoom(17.0)
-                                .build()
-                        }
+                    ) {
+                        Icon(Icons.Default.MyLocation, contentDescription = "Моё местоположение")
                     }
-                ) {
-                    Icon(Icons.Default.MyLocation, contentDescription = "Моё местоположение")
                 }
             }
         }
@@ -370,6 +398,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 PointCallout(
                     point = calloutPoint,
                     poi = selectedPoi,
+                    address = address,
                     elevation = selectedElevation,
                     elevationLoading = elevationLoading,
                     playbackState = playbackState,
@@ -433,6 +462,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
             pendingRouteId = pendingRouteId ?: settings.routeFilterId,
             isVisited = sheetPoint?.let { it.id in visitedPointIds } ?: false,
             suggestedPoi = createRequest?.poi ?: selectedPoi,
+            address = address,
             onRadiusPreview = { vm.setPreviewRadius(it) },
             onDismiss = {
                 vm.selectPoint(null)
@@ -454,8 +484,8 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 vm.closeSheet()
                 container.pendingRouteId.value = null
             },
-            onGenerate = { name, lat, lng, hint, poi ->
-                vm.generateDescription(name, lat, lng, hint, poi)
+            onGenerate = { name, addressText, lat, lng, hint, poi ->
+                vm.generateDescription(name, addressText, lat, lng, hint, poi)
             },
             onSpeak = { text -> vm.speak(text) },
             onMessage = { message ->
@@ -475,6 +505,7 @@ private fun queryPoi(map: MapLibreMap, latLng: LatLng): MapPoi? =
 private fun PointCallout(
     point: PointEntity,
     poi: MapPoi?,
+    address: String?,
     elevation: Double?,
     elevationLoading: Boolean,
     playbackState: PlaybackState,
@@ -513,6 +544,15 @@ private fun PointCallout(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (!address.isNullOrBlank()) {
+                Text(
+                    "Адрес: $address",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             Text(
                 when {
                     elevationLoading -> "Высота: …"
