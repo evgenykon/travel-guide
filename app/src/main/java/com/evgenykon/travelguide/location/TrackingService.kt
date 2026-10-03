@@ -193,7 +193,12 @@ class TrackingService : Service() {
             .setContentText(message ?: getString(R.string.notification_error_text))
             .setAutoCancel(true)
             .build()
-        runCatching {
+        val canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        if (canNotify) {
             NotificationManagerCompat.from(this).notify(ERROR_NOTIFICATION_ID, notification)
         }
     }
