@@ -1,5 +1,6 @@
 package com.evgenykon.travelguide.ui.map
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
@@ -68,11 +70,11 @@ fun PointSheet(
     onSave: (PointEntity) -> Unit,
     onDelete: (PointEntity) -> Unit,
     onGenerate: suspend (name: String, address: String?, lat: Double, lng: Double, hint: String, poi: MapPoi?) -> Result<String>,
-    onSpeak: suspend (String) -> Result<Unit>,
-    onMessage: (String) -> Unit
+    onSpeak: suspend (String) -> Result<Unit>
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val lat = point?.lat ?: createRequest?.lat ?: 0.0
     val lng = point?.lng ?: createRequest?.lng ?: 0.0
@@ -168,8 +170,21 @@ fun PointSheet(
                         generating = true
                         scope.launch {
                             onGenerate(name, address, lat, lng, description, poi)
-                                .onSuccess { description = it }
-                                .onFailure { onMessage(it.message ?: "Не удалось сгенерировать описание") }
+                                .onSuccess {
+                                    description = it
+                                    Toast.makeText(
+                                        context,
+                                        "Описание сгенерировано",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                .onFailure {
+                                    Toast.makeText(
+                                        context,
+                                        "Ошибка генерации: ${it.message ?: "неизвестная"}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             generating = false
                         }
                     },
@@ -188,7 +203,13 @@ fun PointSheet(
                         speaking = true
                         scope.launch {
                             onSpeak(description)
-                                .onFailure { onMessage(it.message ?: "Не удалось озвучить") }
+                                .onFailure {
+                                    Toast.makeText(
+                                        context,
+                                        "Ошибка озвучки: ${it.message ?: "неизвестная"}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             speaking = false
                         }
                     },

@@ -5,7 +5,9 @@ import com.evgenykon.travelguide.network.ChatMessage
 import com.evgenykon.travelguide.network.ChatRequest
 import com.evgenykon.travelguide.network.ModelDto
 import com.evgenykon.travelguide.network.OpenRouterApi
+import com.evgenykon.travelguide.network.responseDetails
 import com.evgenykon.travelguide.util.MapPoi
+import retrofit2.HttpException
 
 class AiRepository(
     private val secureStore: SecureStore,
@@ -50,18 +52,25 @@ class AiRepository(
             hint = hint,
             poi = poi
         )
-        val response = api.chatCompletions(
-            authHeader(key),
-            ChatRequest(
-                model = model,
-                messages = listOf(
-                    ChatMessage("system", SYSTEM_PROMPT),
-                    ChatMessage("user", prompt)
-                ),
-                temperature = 0.3,
-                maxTokens = 900
+        val response = try {
+            api.chatCompletions(
+                authHeader(key),
+                ChatRequest(
+                    model = model,
+                    messages = listOf(
+                        ChatMessage("system", SYSTEM_PROMPT),
+                        ChatMessage("user", prompt)
+                    ),
+                    temperature = 0.3,
+                    maxTokens = 900
+                )
             )
-        )
+        } catch (e: HttpException) {
+            throw IllegalStateException(
+                "OpenRouter: HTTP ${e.code()}${e.responseDetails()}",
+                e
+            )
+        }
         return response.choices.firstOrNull()?.message?.content?.trim().orEmpty()
             .ifBlank { error("Модель вернула пустой ответ") }
     }

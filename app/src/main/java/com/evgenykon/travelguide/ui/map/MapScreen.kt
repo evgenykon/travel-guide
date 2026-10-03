@@ -510,10 +510,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
             onGenerate = { name, addressText, lat, lng, hint, poi ->
                 vm.generateDescription(name, addressText, lat, lng, hint, poi)
             },
-            onSpeak = { text -> vm.speak(text) },
-            onMessage = { message ->
-                scope.launch { snackbarHostState.showSnackbar(message) }
-            }
+            onSpeak = { text -> vm.speak(text) }
         )
     }
 }
