@@ -46,6 +46,8 @@ class RouteRepository(private val dao: RouteDao, private val pointDao: PointDao)
 class HistoryRepository(private val dao: HistoryDao) {
 
     fun observeAll(): Flow<List<HistoryEntity>> = dao.observeAll()
+    fun observeVisitedPointIds(): Flow<List<Long>> = dao.observeVisitedPointIds()
+    suspend fun visitedPointIds(): List<Long> = dao.visitedPointIds()
     suspend fun add(entry: HistoryEntity): Long = dao.insert(entry)
     suspend fun delete(entry: HistoryEntity) = dao.delete(entry)
     suspend fun clear() = dao.clear()

@@ -56,6 +56,8 @@ fun PointSheet(
     routes: List<RouteEntity>,
     defaultRadius: Float,
     pendingRouteId: Long?,
+    isVisited: Boolean,
+    onRadiusPreview: (Double) -> Unit,
     onDismiss: () -> Unit,
     onSave: (PointEntity) -> Unit,
     onDelete: (PointEntity) -> Unit,
@@ -100,6 +102,14 @@ fun PointSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (isVisited) {
+                Text(
+                    "Точка уже озвучена. Чтобы озвучить снова, удалите запись в «Истории».",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             OutlinedTextField(
                 value = name,
@@ -162,7 +172,10 @@ fun PointSheet(
 
             OutlinedTextField(
                 value = radius,
-                onValueChange = { radius = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' } },
+                onValueChange = { input ->
+                    radius = input.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }
+                    radius.replace(',', '.').toDoubleOrNull()?.let { onRadiusPreview(it) }
+                },
                 label = { Text("Радиус озвучки, м") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),

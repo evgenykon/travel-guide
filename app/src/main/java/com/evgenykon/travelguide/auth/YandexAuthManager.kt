@@ -22,6 +22,7 @@ class YandexAuthManager(
 
     fun importKeyJson(keyJson: String): Result<YandexSaKeyJson> = runCatching {
         val key = YandexJwt.parseKey(keyJson)
+        YandexJwt.parsePrivateKey(key.privateKey)
         secureStore.yandexSaKeyJson = keyJson.trim()
         secureStore.iamToken = null
         secureStore.iamExpiresAt = 0L

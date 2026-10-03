@@ -22,6 +22,9 @@ interface PointDao {
     @Query("SELECT * FROM points WHERE id = :id")
     suspend fun getById(id: Long): PointEntity?
 
+    @Query("SELECT * FROM points")
+    suspend fun getAll(): List<PointEntity>
+
     @Insert
     suspend fun insert(point: PointEntity): Long
 
@@ -54,6 +57,9 @@ interface RouteDao {
     @Query("SELECT * FROM routes WHERE id = :id")
     suspend fun getById(id: Long): RouteEntity?
 
+    @Query("SELECT * FROM routes")
+    suspend fun getAll(): List<RouteEntity>
+
     @Query("SELECT * FROM routes WHERE id = :id")
     fun observeById(id: Long): Flow<RouteEntity?>
 
@@ -75,6 +81,12 @@ interface HistoryDao {
 
     @Query("SELECT * FROM history ORDER BY timestamp DESC")
     fun observeAll(): Flow<List<HistoryEntity>>
+
+    @Query("SELECT DISTINCT pointId FROM history WHERE kind = 'ENTER' AND pointId IS NOT NULL")
+    fun observeVisitedPointIds(): Flow<List<Long>>
+
+    @Query("SELECT DISTINCT pointId FROM history WHERE kind = 'ENTER' AND pointId IS NOT NULL")
+    suspend fun visitedPointIds(): List<Long>
 
     @Insert
     suspend fun insert(entry: HistoryEntity): Long

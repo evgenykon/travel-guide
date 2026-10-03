@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.evgenykon.travelguide.auth.OpenRouterOAuth
 import com.evgenykon.travelguide.auth.YandexAuthManager
+import com.evgenykon.travelguide.data.backup.BackupRepository
 import com.evgenykon.travelguide.data.db.AppDatabase
 import com.evgenykon.travelguide.data.prefs.SecureStore
 import com.evgenykon.travelguide.data.prefs.SettingsStore
@@ -37,6 +38,7 @@ class AppContainer(context: Context) {
     val pointRepository = PointRepository(db.pointDao())
     val routeRepository = RouteRepository(db.routeDao(), db.pointDao())
     val historyRepository = HistoryRepository(db.historyDao())
+    val backupRepository = BackupRepository(db)
 
     val audioPlayer = AudioPlayer(context.applicationContext)
     val ttsRepository = TtsRepository(

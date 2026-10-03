@@ -42,6 +42,7 @@ class TrackingService : Service() {
 
     private lateinit var container: AppContainer
     private var pointsCache: List<PointEntity> = emptyList()
+    private var visitedCache: Set<Long> = emptySet()
     private var pointsCacheAt = 0L
 
     private val locationCallback = object : LocationCallback() {
@@ -105,6 +106,8 @@ class TrackingService : Service() {
     private suspend fun handleLocation(lat: Double, lng: Double) {
         val settings = container.settingsStore.settings.first()
         val points = enabledPoints()
+            .filter { settings.routeFilterId == null || it.routeId == settings.routeFilterId }
+            .filter { it.id !in visitedPointIds() }
         val triggered = engine.onLocation(
             points.map { TrackPoint(it.id, it.lat, it.lng, it.radiusMeters, it.enabled) },
             lat,
@@ -126,6 +129,7 @@ class TrackingService : Service() {
                     kind = KIND_ENTER
                 )
             )
+            visitedCache = visitedCache + point.id
 
             if (settings.autoPlay) {
                 speakMutex.withLock {
@@ -141,9 +145,15 @@ class TrackingService : Service() {
         val now = System.currentTimeMillis()
         if (now - pointsCacheAt > POINTS_CACHE_TTL_MS) {
             pointsCache = container.pointRepository.observeEnabled().first()
+            visitedCache = container.historyRepository.visitedPointIds().toSet()
             pointsCacheAt = now
         }
         return pointsCache
+    }
+
+    private suspend fun visitedPointIds(): Set<Long> {
+        enabledPoints()
+        return visitedCache
     }
 
     private fun hasLocationPermission(): Boolean =

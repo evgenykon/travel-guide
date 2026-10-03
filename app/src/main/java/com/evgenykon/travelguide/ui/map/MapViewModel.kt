@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -25,6 +26,17 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     val settings: StateFlow<AppSettings> = container.settingsStore.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
+    val visiblePoints: StateFlow<List<PointEntity>> =
+        combine(points, settings) { list, current ->
+            val filter = current.routeFilterId
+            if (filter == null) list else list.filter { it.routeId == filter }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val visitedPointIds: StateFlow<Set<Long>> = container.historyRepository
+        .observeVisitedPointIds()
+        .map { it.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     private val selectedPointId = MutableStateFlow<Long?>(null)
 
     val selectedPoint: StateFlow<PointEntity?> =
@@ -33,6 +45,9 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     private val createAtState = MutableStateFlow<Pair<Double, Double>?>(null)
     val createAt: StateFlow<Pair<Double, Double>?> = createAtState.asStateFlow()
+
+    private val previewRadiusState = MutableStateFlow<Double?>(null)
+    val previewRadius: StateFlow<Double?> = previewRadiusState.asStateFlow()
 
     val userLocation = MutableStateFlow<Pair<Double, Double>?>(null)
 
@@ -47,6 +62,17 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     fun cancelCreate() {
         createAtState.value = null
+        previewRadiusState.value = null
+    }
+
+    fun setPreviewRadius(radius: Double?) {
+        previewRadiusState.value = radius
+    }
+
+    fun setRouteFilter(id: Long?) {
+        viewModelScope.launch {
+            container.settingsStore.setRouteFilterId(id)
+        }
     }
 
     fun save(point: PointEntity) {

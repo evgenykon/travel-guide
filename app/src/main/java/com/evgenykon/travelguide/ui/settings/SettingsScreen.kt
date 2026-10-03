@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.BuildConfig
+import com.evgenykon.travelguide.data.backup.ImportResult
 import com.evgenykon.travelguide.data.prefs.AppSettings
 import com.evgenykon.travelguide.location.TrackingService
 import com.evgenykon.travelguide.location.hasLocationPermission
@@ -168,10 +169,18 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         val current = settings.value
         viewModelScope.launch {
             container.ttsRepository
-                .speak("Привет! Это тест озвучки Travel Guide.", current.voice, current.speed.toDouble())
+                .speak("Привет! Это тест озвучки Eff Travel Guide.", current.voice, current.speed.toDouble())
                 .onFailure { messageState.value = it.message ?: "Не удалось озвучить" }
         }
     }
+
+    fun showMessage(text: String) {
+        messageState.value = text
+    }
+
+    suspend fun exportJson(): String = container.backupRepository.exportJson()
+
+    suspend fun importJson(text: String): ImportResult = container.backupRepository.importJson(text)
 
     fun refreshConnections() {
         yandexConnectedState.value = container.yandexAuth.isConnected
@@ -230,6 +239,48 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
         } else {
             scope.launch {
                 snackbarHostState.showSnackbar("Нужно разрешение на геолокацию")
+            }
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                runCatching {
+                    val json = vm.exportJson()
+                    context.contentResolver.openOutputStream(uri)?.use {
+                        it.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: error("Не удалось открыть файл")
+                }.onSuccess {
+                    snackbarHostState.showSnackbar("Экспорт завершён")
+                }.onFailure {
+                    snackbarHostState.showSnackbar(it.message ?: "Ошибка экспорта")
+                }
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                runCatching {
+                    val text = context.contentResolver.openInputStream(uri)
+                        ?.bufferedReader()
+                        ?.use { it.readText() }
+                        ?: error("Не удалось прочитать файл")
+                    vm.importJson(text)
+                }.onSuccess { result ->
+                    snackbarHostState.showSnackbar(
+                        "Импорт: маршрутов +${result.routesAdded}, " +
+                            "точек +${result.pointsAdded}, пропущено ${result.pointsSkipped}"
+                    )
+                }.onFailure {
+                    snackbarHostState.showSnackbar("Ошибка импорта: ${it.message ?: "неизвестная"}")
+                }
             }
         }
     }
@@ -345,7 +396,8 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     )
                 }
                 Text(
-                    "При входе в 10-метровую зону точки приложение озвучит её описание. " +
+                    "При входе в 10-метровую зону точки приложение озвучит её описание один раз. " +
+                        "Повторная озвучка — после удаления записи в «Истории». " +
                         "Работает при выключенном экране (постоянное уведомление).",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -367,8 +419,33 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                 )
             }
 
+            SettingsSection("Данные: импорт и экспорт") {
+                Text(
+                    "Сохраняет маршруты и точки (включая описания) в JSON-файл. " +
+                        "Импорт добавляет данные и пропускает уже существующие точки.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = {
+                        exportLauncher.launch(
+                            "eff-travel-guide-${System.currentTimeMillis()}.json"
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Экспорт маршрутов и точек")
+                }
+                OutlinedButton(
+                    onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Импорт маршрутов и точек")
+                }
+            }
+
             SettingsSection("О приложении") {
-                Text("Travel Guide ${BuildConfig.VERSION_NAME}")
+                Text("Eff Travel Guide ${BuildConfig.VERSION_NAME}")
                 Text(
                     "MapLibre · Yandex SpeechKit · OpenRouter",
                     style = MaterialTheme.typography.bodySmall,

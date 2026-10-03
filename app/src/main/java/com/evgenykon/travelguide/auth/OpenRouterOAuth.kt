@@ -24,7 +24,7 @@ class OpenRouterOAuth(private val api: OpenRouterApi) {
 
     suspend fun authorize(
         context: Context,
-        appLabel: String = "Travel Guide"
+        appLabel: String = "Eff Travel Guide"
     ): AuthResult = withContext(Dispatchers.IO) {
         val verifier = Pkce.generateVerifier()
         val challenge = Pkce.challenge(verifier)

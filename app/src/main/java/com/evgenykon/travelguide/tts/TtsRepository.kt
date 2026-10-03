@@ -65,17 +65,26 @@ class TtsRepository(
         voice: String,
         speed: Double
     ): ResponseBody {
-        val token = auth.getIamToken()
+        val token = iamToken()
         return try {
             api.synthesize("Bearer $token", text = text, voice = voice, speed = formatSpeed(speed))
         } catch (e: HttpException) {
             if (e.code() == 401) {
-                val fresh = auth.getIamToken(forceRefresh = true)
+                val fresh = iamToken(forceRefresh = true)
                 api.synthesize("Bearer $fresh", text = text, voice = voice, speed = formatSpeed(speed))
             } else {
                 throw e
             }
         }
+    }
+
+    private suspend fun iamToken(forceRefresh: Boolean = false): String = try {
+        auth.getIamToken(forceRefresh)
+    } catch (e: Exception) {
+        throw IllegalStateException(
+            "Ошибка ключа Yandex SpeechKit: ${e.message ?: "неизвестная ошибка"}",
+            e
+        )
     }
 
     private fun formatSpeed(speed: Double): String =

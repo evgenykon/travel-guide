@@ -7,15 +7,7 @@ import androidx.security.crypto.MasterKey
 
 class SecureStore(context: Context) {
 
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "secure_store",
-        MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val prefs: SharedPreferences = createPrefs(context.applicationContext)
 
     var yandexSaKeyJson: String?
         get() = prefs.getString(KEY_YANDEX_KEY, null)
@@ -46,9 +38,27 @@ class SecureStore(context: Context) {
     }
 
     private companion object {
+        const val FILE_NAME = "secure_store"
         const val KEY_YANDEX_KEY = "yandex_sa_key"
         const val KEY_IAM_TOKEN = "yandex_iam_token"
         const val KEY_IAM_EXPIRES = "yandex_iam_expires"
         const val KEY_OPENROUTER = "openrouter_key"
+
+        fun createPrefs(context: Context): SharedPreferences = try {
+            create(context)
+        } catch (e: Exception) {
+            context.deleteSharedPreferences(FILE_NAME)
+            create(context)
+        }
+
+        fun create(context: Context): SharedPreferences = EncryptedSharedPreferences.create(
+            context,
+            FILE_NAME,
+            MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build(),
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
     }
 }
