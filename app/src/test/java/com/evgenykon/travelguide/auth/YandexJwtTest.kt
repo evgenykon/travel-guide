@@ -42,7 +42,7 @@ class YandexJwtTest {
         assertEquals(listOf(IAM_TOKEN_AUDIENCE), parsed.jwtClaimsSet.audience)
         assertEquals(1_700_000_000_000L - 60_000L, parsed.jwtClaimsSet.issueTime.time)
         assertEquals(1_700_003_600_000L - 60_000L, parsed.jwtClaimsSet.expirationTime.time)
-        assertEquals(3600L, parsed.jwtClaimsSet.expirationTime.time - parsed.jwtClaimsSet.issueTime.time)
+        assertEquals(3_600_000L, parsed.jwtClaimsSet.expirationTime.time - parsed.jwtClaimsSet.issueTime.time)
     }
 
     @Test
