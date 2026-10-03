@@ -36,7 +36,7 @@ class AiRepository(
         model: String,
         promptTemplate: String,
         name: String,
-        address: String?,
+        place: PlaceInfo?,
         lat: Double,
         lng: Double,
         hint: String,
@@ -46,7 +46,7 @@ class AiRepository(
         val prompt = PromptBuilder.build(
             template = promptTemplate,
             name = name,
-            address = address,
+            place = place,
             lat = lat,
             lng = lng,
             hint = hint,

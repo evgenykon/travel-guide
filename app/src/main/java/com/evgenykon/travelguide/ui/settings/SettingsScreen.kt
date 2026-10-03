@@ -188,6 +188,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     suspend fun importJson(text: String): ImportResult = container.backupRepository.importJson(text)
 
+    suspend fun exportSettingsJson(): String = container.settingsBackupRepository.exportJson()
+
+    suspend fun importSettingsJson(text: String) = container.settingsBackupRepository.importJson(text)
+
     fun refreshConnections() {
         yandexConnectedState.value = container.yandexAuth.isConnected
         orConnectedState.value = container.aiRepository.isConnected
@@ -234,6 +238,47 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
         message?.let {
             snackbarHostState.showSnackbar(it)
             vm.clearMessage()
+        }
+    }
+
+    val settingsExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                runCatching {
+                    val json = vm.exportSettingsJson()
+                    context.contentResolver.openOutputStream(uri)?.use {
+                        it.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: error("Не удалось открыть файл")
+                }.onSuccess {
+                    snackbarHostState.showSnackbar("Настройки экспортированы")
+                }.onFailure {
+                    snackbarHostState.showSnackbar(it.message ?: "Ошибка экспорта настроек")
+                }
+            }
+        }
+    }
+
+    val settingsImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                runCatching {
+                    val text = context.contentResolver.openInputStream(uri)
+                        ?.bufferedReader()
+                        ?.use { it.readText() }
+                        ?: error("Не удалось прочитать файл")
+                    vm.importSettingsJson(text)
+                }.onSuccess {
+                    snackbarHostState.showSnackbar("Настройки импортированы")
+                }.onFailure {
+                    snackbarHostState.showSnackbar(
+                        "Ошибка импорта настроек: ${it.message ?: "неизвестная"}"
+                    )
+                }
+            }
         }
     }
 
@@ -469,6 +514,29 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Импорт маршрутов и точек")
+                }
+                Text(
+                    "Настройки: промпт, модель OpenRouter, голос, скорость, радиус и стиль карты.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = {
+                        settingsExportLauncher.launch(
+                            "eff-travel-guide-settings-${System.currentTimeMillis()}.json"
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Экспорт настроек")
+                }
+                OutlinedButton(
+                    onClick = {
+                        settingsImportLauncher.launch(arrayOf("application/json", "*/*"))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Импорт настроек")
                 }
             }
 

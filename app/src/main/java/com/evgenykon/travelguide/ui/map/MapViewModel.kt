@@ -6,6 +6,7 @@ import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.data.prefs.AppSettings
+import com.evgenykon.travelguide.data.repo.PlaceInfo
 import com.evgenykon.travelguide.util.Geo
 import com.evgenykon.travelguide.util.MapPoi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,8 +61,8 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     private val elevationLoadingState = MutableStateFlow(false)
     val elevationLoading: StateFlow<Boolean> = elevationLoadingState.asStateFlow()
 
-    private val addressState = MutableStateFlow<String?>(null)
-    val address: StateFlow<String?> = addressState.asStateFlow()
+    private val placeState = MutableStateFlow<PlaceInfo?>(null)
+    val place: StateFlow<PlaceInfo?> = placeState.asStateFlow()
 
     private val sheetOpenState = MutableStateFlow(false)
     val sheetOpen: StateFlow<Boolean> = sheetOpenState.asStateFlow()
@@ -82,7 +83,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
         selectedPointId.value = id
         selectedPoiState.value = poi
         selectedElevationState.value = null
-        addressState.value = null
+        placeState.value = null
         val point = id?.let { pointId -> points.value.firstOrNull { it.id == pointId } }
         if (point == null) {
             sheetOpenState.value = false
@@ -93,7 +94,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
             selectedElevationState.value =
                 container.elevationRepository.elevation(point.lat, point.lng)
             elevationLoadingState.value = false
-            addressState.value = container.addressRepository.address(point.lat, point.lng)
+            placeState.value = container.addressRepository.place(point.lat, point.lng)
         }
     }
 
@@ -110,11 +111,11 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     fun startCreate(lat: Double, lng: Double, poi: MapPoi? = null) {
         selectedPointId.value = null
         selectedPoiState.value = null
-        addressState.value = null
+        placeState.value = null
         sheetOpenState.value = false
         createRequestState.value = CreateRequest(lat, lng, poi)
         viewModelScope.launch {
-            addressState.value = container.addressRepository.address(lat, lng)
+            placeState.value = container.addressRepository.place(lat, lng)
         }
     }
 
@@ -169,7 +170,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     suspend fun generateDescription(
         name: String,
-        address: String?,
+        place: PlaceInfo?,
         lat: Double,
         lng: Double,
         hint: String,
@@ -180,7 +181,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
             model = current.model,
             promptTemplate = current.promptTemplate,
             name = name,
-            address = address,
+            place = place,
             lat = lat,
             lng = lng,
             hint = hint,

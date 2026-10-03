@@ -8,7 +8,7 @@ object PromptBuilder {
     fun build(
         template: String,
         name: String,
-        address: String?,
+        place: PlaceInfo?,
         lat: Double,
         lng: Double,
         hint: String,
@@ -19,7 +19,10 @@ object PromptBuilder {
             .orEmpty()
         return template
             .replace("{name}", name.ifBlank { "—" })
-            .replace("{address}", address?.takeIf { it.isNotBlank() } ?: "—")
+            .replace("{address}", place?.address?.takeIf { it.isNotBlank() } ?: "—")
+            .replace("{city}", place?.city?.takeIf { it.isNotBlank() } ?: "—")
+            .replace("{country}", place?.country?.takeIf { it.isNotBlank() } ?: "—")
+            .replace("{location}", place?.location ?: "—")
             .replace("{lat}", String.format(Locale.US, "%.5f", lat))
             .replace("{lng}", String.format(Locale.US, "%.5f", lng))
             .replace("{object}", objectText.ifBlank { "—" })

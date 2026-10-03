@@ -43,23 +43,29 @@ class AddressRepositoryTest {
     }
 
     @Test
-    fun buildsStreetAndHouseNumberAndCaches() = runTest {
+    fun buildsPlaceInfoAndCaches() = runTest {
         server.enqueue(
             MockResponse()
                 .setHeader("Content-Type", "application/json")
                 .setBody(
-                    """{"display_name":"Россия, Москва, Тверская улица, 1","address":{"road":"Тверская улица","house_number":"1","city":"Москва"}}"""
+                    """{"display_name":"Армения, Ереван, улица Абовяна, 1","address":{"road":"улица Абовяна","house_number":"1","city":"Ереван","country":"Армения"}}"""
                 )
         )
 
-        assertEquals("Тверская улица, д. 1", repository.address(55.76, 37.61))
-        assertEquals("Тверская улица, д. 1", repository.address(55.76, 37.61))
+        val first = repository.place(40.18, 44.51)
+        val second = repository.place(40.18, 44.51)
+
+        assertEquals("улица Абовяна, д. 1", first?.address)
+        assertEquals("Ереван", first?.city)
+        assertEquals("Армения", first?.country)
+        assertEquals("Ереван, Армения", first?.location)
+        assertEquals(first, second)
 
         assertEquals(1, server.requestCount)
         val request = server.takeRequest()
         assertTrue(request.path.orEmpty().startsWith("/reverse?"))
-        assertTrue(request.path.orEmpty().contains("lat=55.76"))
-        assertTrue(request.path.orEmpty().contains("lon=37.61"))
+        assertTrue(request.path.orEmpty().contains("lat=40.18"))
+        assertTrue(request.path.orEmpty().contains("lon=44.51"))
     }
 
     @Test
@@ -68,16 +74,35 @@ class AddressRepositoryTest {
             MockResponse()
                 .setHeader("Content-Type", "application/json")
                 .setBody(
-                    """{"display_name":"Россия, Москва, Красная площадь","address":{"city":"Москва"}}"""
+                    """{"display_name":"Армения, Ереван, Мост Победы","address":{"city":"Ереван","country":"Армения"}}"""
                 )
         )
 
-        assertEquals("Россия, Москва, Красная площадь", repository.address(55.75, 37.62))
+        val place = repository.place(40.17, 44.51)
+
+        assertEquals("Армения, Ереван, Мост Победы", place?.address)
+        assertEquals("Ереван, Армения", place?.location)
+    }
+
+    @Test
+    fun usesTownWhenCityIsMissing() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody(
+                    """{"display_name":"Россия, Тверь","address":{"road":"Советская улица","town":"Тверь","country":"Россия"}}"""
+                )
+        )
+
+        val place = repository.place(56.86, 35.91)
+
+        assertEquals("Тверь", place?.city)
+        assertEquals("Тверь, Россия", place?.location)
     }
 
     @Test
     fun returnsNullOnServerError() = runTest {
         server.enqueue(MockResponse().setResponseCode(500))
-        assertNull(repository.address(1.0, 2.0))
+        assertNull(repository.place(1.0, 2.0))
     }
 }

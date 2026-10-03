@@ -60,6 +60,7 @@ import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
+import com.evgenykon.travelguide.data.repo.PlaceInfo
 import com.evgenykon.travelguide.location.hasLocationPermission
 import com.evgenykon.travelguide.tts.PlaybackState
 import com.evgenykon.travelguide.util.Geo
@@ -116,7 +117,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
     val selectedPoi by vm.selectedPoi.collectAsStateWithLifecycle()
     val selectedElevation by vm.selectedElevation.collectAsStateWithLifecycle()
     val elevationLoading by vm.elevationLoading.collectAsStateWithLifecycle()
-    val address by vm.address.collectAsStateWithLifecycle()
+    val place by vm.place.collectAsStateWithLifecycle()
     val createRequest by vm.createRequest.collectAsStateWithLifecycle()
     val previewRadius by vm.previewRadius.collectAsStateWithLifecycle()
     val sheetOpen by vm.sheetOpen.collectAsStateWithLifecycle()
@@ -421,7 +422,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 PointCallout(
                     point = calloutPoint,
                     poi = selectedPoi,
-                    address = address,
+                    place = place,
                     elevation = selectedElevation,
                     elevationLoading = elevationLoading,
                     playbackState = playbackState,
@@ -485,7 +486,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
             pendingRouteId = pendingRouteId ?: settings.routeFilterId,
             isVisited = sheetPoint?.let { it.id in visitedPointIds } ?: false,
             suggestedPoi = createRequest?.poi ?: selectedPoi,
-            address = address,
+            place = place,
             onRadiusPreview = { vm.setPreviewRadius(it) },
             onDismiss = {
                 vm.selectPoint(null)
@@ -507,8 +508,8 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 vm.closeSheet()
                 container.pendingRouteId.value = null
             },
-            onGenerate = { name, addressText, lat, lng, hint, poi ->
-                vm.generateDescription(name, addressText, lat, lng, hint, poi)
+            onGenerate = { name, placeInfo, lat, lng, hint, poi ->
+                vm.generateDescription(name, placeInfo, lat, lng, hint, poi)
             },
             onSpeak = { text -> vm.speak(text) }
         )
@@ -525,7 +526,7 @@ private fun queryPoi(map: MapLibreMap, latLng: LatLng): MapPoi? =
 private fun PointCallout(
     point: PointEntity,
     poi: MapPoi?,
-    address: String?,
+    place: PlaceInfo?,
     elevation: Double?,
     elevationLoading: Boolean,
     playbackState: PlaybackState,
@@ -564,9 +565,18 @@ private fun PointCallout(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!address.isNullOrBlank()) {
+            place?.address?.takeIf { it.isNotBlank() }?.let { addressText ->
                 Text(
-                    "Адрес: $address",
+                    "Адрес: $addressText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            place?.location?.let { locationText ->
+                Text(
+                    "Город, страна: $locationText",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

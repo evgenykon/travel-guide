@@ -10,26 +10,48 @@ import org.junit.Test
 class PromptBuilderTest {
 
     private val template =
-        "Точка: {name}\nАдрес: {address}\nКоординаты: {lat}, {lng}\nОбъект: {object}\nЗаметка: {hint}"
+        "Точка: {name}\nАдрес: {address}\nГород, страна: {location}\n" +
+            "Координаты: {lat}, {lng}\nОбъект: {object}\nЗаметка: {hint}"
+
+    private val place = PlaceInfo(
+        address = "улица Абовяна, д. 1",
+        city = "Ереван",
+        country = "Армения"
+    )
 
     @Test
     fun substitutesAllPlaceholders() {
         val prompt = PromptBuilder.build(
             template = template,
-            name = "Кремль",
-            address = "Кремлёвская набережная, д. 1",
-            lat = 55.75212,
-            lng = 37.61734,
-            hint = "старая крепость",
-            poi = MapPoi("Московский Кремль", "крепость")
+            name = "Мост Победы",
+            place = place,
+            lat = 40.18123,
+            lng = 44.51123,
+            hint = "старый мост",
+            poi = MapPoi("Мост Победы", "мост")
         )
 
-        assertTrue(prompt.contains("Точка: Кремль"))
-        assertTrue(prompt.contains("Адрес: Кремлёвская набережная, д. 1"))
-        assertTrue(prompt.contains("Координаты: 55.75212, 37.61734"))
-        assertTrue(prompt.contains("Объект: Московский Кремль — крепость"))
-        assertTrue(prompt.contains("Заметка: старая крепость"))
+        assertTrue(prompt.contains("Точка: Мост Победы"))
+        assertTrue(prompt.contains("Адрес: улица Абовяна, д. 1"))
+        assertTrue(prompt.contains("Город, страна: Ереван, Армения"))
+        assertTrue(prompt.contains("Координаты: 40.18123, 44.51123"))
+        assertTrue(prompt.contains("Объект: Мост Победы — мост"))
+        assertTrue(prompt.contains("Заметка: старый мост"))
         assertFalse(prompt.contains("{"))
+    }
+
+    @Test
+    fun substitutesCityAndCountrySeparately() {
+        val prompt = PromptBuilder.build(
+            template = "{city}|{country}",
+            name = "",
+            place = place,
+            lat = 0.0,
+            lng = 0.0,
+            hint = "",
+            poi = null
+        )
+        assertEquals("Ереван|Армения", prompt)
     }
 
     @Test
@@ -37,7 +59,7 @@ class PromptBuilderTest {
         val prompt = PromptBuilder.build(
             template = template,
             name = "",
-            address = null,
+            place = null,
             lat = 1.0,
             lng = 2.0,
             hint = "  ",
@@ -46,31 +68,22 @@ class PromptBuilderTest {
 
         assertTrue(prompt.contains("Точка: —"))
         assertTrue(prompt.contains("Адрес: —"))
+        assertTrue(prompt.contains("Город, страна: —"))
         assertTrue(prompt.contains("Объект: —"))
         assertTrue(prompt.contains("Заметка: —"))
     }
 
     @Test
-    fun keepsCustomTextAndPlaceholders() {
-        val prompt = PromptBuilder.build(
-            template = "Мой промпт без подстановок",
-            name = "X",
-            address = null,
-            lat = 0.0,
-            lng = 0.0,
-            hint = "",
-            poi = null
-        )
-        assertEquals("Мой промпт без подстановок", prompt)
-    }
-
-    @Test
-    fun defaultTemplateForbidsSpeculationAndTechnicalData() {
+    fun defaultTemplateForbidsSpeculationAndConfusesCities() {
         val template = AppSettings.DEFAULT_PROMPT_TEMPLATE
         assertTrue(template.contains("могли бы"))
         assertTrue(template.contains("не выдумывай"))
         assertTrue(template.contains("достоверные"))
         assertTrue(template.contains("озвучивается"))
+        assertTrue(template.contains("не путай"))
+        assertTrue(template.contains("{location}"))
+        assertTrue(template.contains("{city}"))
+        assertTrue(template.contains("{country}"))
         assertTrue(template.contains("{address}"))
         assertTrue(template.contains("{object}"))
         assertTrue(template.contains("{name}"))

@@ -87,7 +87,8 @@ data class NominatimAddress(
     @SerialName("house_number") val houseNumber: String? = null,
     val city: String? = null,
     val town: String? = null,
-    val village: String? = null
+    val village: String? = null,
+    val country: String? = null
 )
 
 @Serializable

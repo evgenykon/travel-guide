@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
+import com.evgenykon.travelguide.data.repo.PlaceInfo
 import com.evgenykon.travelguide.util.MapPoi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,12 +66,12 @@ fun PointSheet(
     pendingRouteId: Long?,
     isVisited: Boolean,
     suggestedPoi: MapPoi?,
-    address: String?,
+    place: PlaceInfo?,
     onRadiusPreview: (Double) -> Unit,
     onDismiss: () -> Unit,
     onSave: (PointEntity) -> Unit,
     onDelete: (PointEntity) -> Unit,
-    onGenerate: suspend (name: String, address: String?, lat: Double, lng: Double, hint: String, poi: MapPoi?) -> Result<String>,
+    onGenerate: suspend (name: String, place: PlaceInfo?, lat: Double, lng: Double, hint: String, poi: MapPoi?) -> Result<String>,
     onSpeak: suspend (String) -> Result<Unit>
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -126,9 +127,17 @@ fun PointSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (!address.isNullOrBlank()) {
+            if (!place?.address.isNullOrBlank()) {
                 Text(
-                    "Адрес: $address",
+                    "Адрес: ${place?.address}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            place?.location?.let { locationText ->
+                Text(
+                    "Город, страна: $locationText",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -192,7 +201,7 @@ fun PointSheet(
                         generating = true
                         statusMessage = null
                         scope.launch {
-                            onGenerate(name, address, lat, lng, description, poi)
+                            onGenerate(name, place, lat, lng, description, poi)
                                 .onSuccess {
                                     description = it
                                     statusIsError = false
