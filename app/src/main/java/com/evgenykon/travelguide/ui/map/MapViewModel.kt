@@ -6,6 +6,7 @@ import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.data.prefs.AppSettings
+import com.evgenykon.travelguide.util.Geo
 import com.evgenykon.travelguide.util.MapPoi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -72,6 +73,10 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     val previewRadius: StateFlow<Double?> = previewRadiusState.asStateFlow()
 
     val userLocation = MutableStateFlow<Pair<Double, Double>?>(null)
+
+    private var lastSavedLat: Double? = null
+    private var lastSavedLng: Double? = null
+    private var lastSavedAt = 0L
 
     fun selectPoint(id: Long?, poi: MapPoi? = null) {
         selectedPointId.value = id
@@ -148,6 +153,18 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     fun onUserLocation(lat: Double, lng: Double) {
         userLocation.value = lat to lng
+        val now = System.currentTimeMillis()
+        val savedLat = lastSavedLat
+        val savedLng = lastSavedLng
+        val movedFar = savedLat == null || savedLng == null ||
+            Geo.distanceMeters(savedLat, savedLng, lat, lng) > 100.0
+        val timePassed = now - lastSavedAt > 120_000L
+        if (movedFar || timePassed) {
+            lastSavedLat = lat
+            lastSavedLng = lng
+            lastSavedAt = now
+            viewModelScope.launch { container.settingsStore.setLastLocation(lat, lng) }
+        }
     }
 
     suspend fun generateDescription(

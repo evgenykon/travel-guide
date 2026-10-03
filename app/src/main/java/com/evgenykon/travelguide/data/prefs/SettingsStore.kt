@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -25,7 +26,9 @@ data class AppSettings(
     val routeFilterId: Long? = null,
     val promptTemplate: String = DEFAULT_PROMPT_TEMPLATE,
     val xiaomiAutostartConfirmed: Boolean = false,
-    val xiaomiBatteryConfirmed: Boolean = false
+    val xiaomiBatteryConfirmed: Boolean = false,
+    val lastLat: Double? = null,
+    val lastLng: Double? = null
 ) {
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-4o-mini"
@@ -71,7 +74,9 @@ class SettingsStore(private val context: Context) {
             routeFilterId = routeFilter.takeIf { it != AppSettings.NO_ROUTE_FILTER },
             promptTemplate = prefs[KEY_PROMPT] ?: AppSettings.DEFAULT_PROMPT_TEMPLATE,
             xiaomiAutostartConfirmed = prefs[KEY_XIAOMI_AUTOSTART] ?: false,
-            xiaomiBatteryConfirmed = prefs[KEY_XIAOMI_BATTERY] ?: false
+            xiaomiBatteryConfirmed = prefs[KEY_XIAOMI_BATTERY] ?: false,
+            lastLat = prefs[KEY_LAST_LAT],
+            lastLng = prefs[KEY_LAST_LNG]
         )
     }
 
@@ -89,6 +94,10 @@ class SettingsStore(private val context: Context) {
     suspend fun resetPromptTemplate() = edit { it[KEY_PROMPT] = AppSettings.DEFAULT_PROMPT_TEMPLATE }
     suspend fun setXiaomiAutostartConfirmed(value: Boolean) = edit { it[KEY_XIAOMI_AUTOSTART] = value }
     suspend fun setXiaomiBatteryConfirmed(value: Boolean) = edit { it[KEY_XIAOMI_BATTERY] = value }
+    suspend fun setLastLocation(lat: Double, lng: Double) = edit {
+        it[KEY_LAST_LAT] = lat
+        it[KEY_LAST_LNG] = lng
+    }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)
@@ -106,5 +115,7 @@ class SettingsStore(private val context: Context) {
         val KEY_PROMPT = stringPreferencesKey("prompt_template")
         val KEY_XIAOMI_AUTOSTART = booleanPreferencesKey("xiaomi_autostart")
         val KEY_XIAOMI_BATTERY = booleanPreferencesKey("xiaomi_battery")
+        val KEY_LAST_LAT = doublePreferencesKey("last_lat")
+        val KEY_LAST_LNG = doublePreferencesKey("last_lng")
     }
 }

@@ -164,7 +164,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleRef by remember { mutableStateOf<Style?>(null) }
     var mapReady by remember { mutableStateOf(false) }
-    var centeredOnUser by remember { mutableStateOf(false) }
+    var centeredTarget by remember { mutableStateOf<Pair<Double, Double>?>(null) }
 
     val styleUrl = settings.styleUrl
 
@@ -184,14 +184,21 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 styleRef = style
                 mapReady = true
             }
+            val savedLat = vm.settings.value.lastLat
+            val savedLng = vm.settings.value.lastLng
+            val initialTarget = if (savedLat != null && savedLng != null) {
+                LatLng(savedLat, savedLng)
+            } else {
+                DEFAULT_TARGET
+            }
             map.cameraPosition = CameraPosition.Builder()
-                .target(DEFAULT_TARGET)
-                .zoom(10.0)
+                .target(initialTarget)
+                .zoom(if (savedLat != null) 15.0 else 10.0)
                 .build()
             if (context.hasLocationPermission()) {
                 container.locationProvider.lastLocation().addOnSuccessListener { location ->
-                    if (location != null && !centeredOnUser) {
-                        centeredOnUser = true
+                    if (location != null && centeredTarget == null) {
+                        centeredTarget = location.latitude to location.longitude
                         map.cameraPosition = CameraPosition.Builder()
                             .target(LatLng(location.latitude, location.longitude))
                             .zoom(15.0)
@@ -272,16 +279,32 @@ fun MapScreen(container: AppContainer, navController: NavController) {
         }
         style.getSourceAs<GeoJsonSource>(SOURCE_USER)?.setGeoJson(collection)
 
-        if (location != null && !centeredOnUser) {
-            centeredOnUser = true
-            mapRef?.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(location.first, location.second),
-                    15.0
-                ),
-                600
-            )
+        if (location != null) {
+            val centered = centeredTarget
+            val farAway = centered == null ||
+                Geo.distanceMeters(centered.first, centered.second, location.first, location.second) > 2_000.0
+            if (farAway) {
+                centeredTarget = location
+                mapRef?.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(location.first, location.second),
+                        15.0
+                    ),
+                    600
+                )
+            }
         }
+    }
+
+    LaunchedEffect(mapReady, settings.lastLat, settings.lastLng) {
+        if (!mapReady || centeredTarget != null) return@LaunchedEffect
+        val lat = settings.lastLat ?: return@LaunchedEffect
+        val lng = settings.lastLng ?: return@LaunchedEffect
+        centeredTarget = lat to lng
+        mapRef?.cameraPosition = CameraPosition.Builder()
+            .target(LatLng(lat, lng))
+            .zoom(15.0)
+            .build()
     }
 
     LaunchedEffect(mapReady, selectedPoint?.id) {
