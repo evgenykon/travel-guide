@@ -57,8 +57,6 @@ import com.evgenykon.travelguide.BuildConfig
 import com.evgenykon.travelguide.data.backup.ImportResult
 import com.evgenykon.travelguide.data.prefs.AppSettings
 import com.evgenykon.travelguide.location.TrackingService
-import com.evgenykon.travelguide.location.hasLocationPermission
-import com.evgenykon.travelguide.location.trackingPermissions
 import com.evgenykon.travelguide.network.ModelDto
 import com.evgenykon.travelguide.network.VoiceDto
 import kotlinx.coroutines.Dispatchers
@@ -161,6 +159,14 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch { container.settingsStore.setStyleUrl(url) }
     }
 
+    fun setPromptTemplate(template: String) {
+        viewModelScope.launch { container.settingsStore.setPromptTemplate(template) }
+    }
+
+    fun resetPromptTemplate() {
+        viewModelScope.launch { container.settingsStore.resetPromptTemplate() }
+    }
+
     fun setTrackingEnabled(enabled: Boolean) {
         viewModelScope.launch { container.settingsStore.setTrackingEnabled(enabled) }
     }
@@ -220,6 +226,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
 
     var showVoiceDialog by remember { mutableStateOf(false) }
     var showModelDialog by remember { mutableStateOf(false) }
+    var showTrackingSetup by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.refreshConnections() }
 
@@ -227,19 +234,6 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
         message?.let {
             snackbarHostState.showSnackbar(it)
             vm.clearMessage()
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        if (context.hasLocationPermission()) {
-            TrackingService.start(context)
-            vm.setTrackingEnabled(true)
-        } else {
-            scope.launch {
-                snackbarHostState.showSnackbar("Нужно разрешение на геолокацию")
-            }
         }
     }
 
@@ -382,12 +376,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                         checked = tracking,
                         onCheckedChange = { checked ->
                             if (checked) {
-                                if (context.hasLocationPermission()) {
-                                    TrackingService.start(context)
-                                    vm.setTrackingEnabled(true)
-                                } else {
-                                    permissionLauncher.launch(trackingPermissions())
-                                }
+                                showTrackingSetup = true
                             } else {
                                 TrackingService.stop(context)
                                 vm.setTrackingEnabled(false)
@@ -413,10 +402,48 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     singleLine = true
                 )
                 Text(
-                    "Пусто — встроенный стиль OpenStreetMap",
+                    "Пусто — встроенный векторный стиль OpenFreeMap (русские подписи)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            SettingsSection("Промпт генерации описаний") {
+                var promptDraft by remember(settings.promptTemplate) {
+                    mutableStateOf(settings.promptTemplate)
+                }
+                Text(
+                    "Подстановки: {name} — название точки, {lat}/{lng} — координаты, " +
+                        "{object} — объект OSM под точкой, {hint} — текст поля «Описание». " +
+                        "Системная роль («экскурсовод, только достоверные факты») задана приложением.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = promptDraft,
+                    onValueChange = { promptDraft = it },
+                    label = { Text("Шаблон промпта") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 220.dp)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { vm.setPromptTemplate(promptDraft) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Сохранить")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            promptDraft = AppSettings.DEFAULT_PROMPT_TEMPLATE
+                            vm.resetPromptTemplate()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Сбросить")
+                    }
+                }
             }
 
             SettingsSection("Данные: импорт и экспорт") {
@@ -453,6 +480,14 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                 )
             }
         }
+    }
+
+    if (showTrackingSetup) {
+        TrackingSetupDialog(
+            container = container,
+            onDismiss = { showTrackingSetup = false },
+            onStart = { TrackingService.start(context) }
+        )
     }
 
     if (showVoiceDialog) {

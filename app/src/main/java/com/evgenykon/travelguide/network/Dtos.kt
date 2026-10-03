@@ -71,6 +71,11 @@ data class VoicesResponse(
 )
 
 @Serializable
+data class ElevationResponse(
+    val elevation: List<Double> = emptyList()
+)
+
+@Serializable
 data class VoiceDto(
     val name: String,
     val gender: String? = null,

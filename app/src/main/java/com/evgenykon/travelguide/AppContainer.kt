@@ -9,6 +9,7 @@ import com.evgenykon.travelguide.data.db.AppDatabase
 import com.evgenykon.travelguide.data.prefs.SecureStore
 import com.evgenykon.travelguide.data.prefs.SettingsStore
 import com.evgenykon.travelguide.data.repo.AiRepository
+import com.evgenykon.travelguide.data.repo.ElevationRepository
 import com.evgenykon.travelguide.data.repo.HistoryRepository
 import com.evgenykon.travelguide.data.repo.PointRepository
 import com.evgenykon.travelguide.data.repo.RouteRepository
@@ -34,6 +35,7 @@ class AppContainer(context: Context) {
     val yandexAuth = YandexAuthManager(secureStore, network.yandexIamApi)
     val openRouterOAuth = OpenRouterOAuth(network.openRouterApi)
     val aiRepository = AiRepository(secureStore, network.openRouterApi)
+    val elevationRepository = ElevationRepository(network.openMeteoApi)
 
     val pointRepository = PointRepository(db.pointDao())
     val routeRepository = RouteRepository(db.routeDao(), db.pointDao())

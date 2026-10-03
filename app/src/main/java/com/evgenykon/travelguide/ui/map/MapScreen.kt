@@ -4,27 +4,39 @@ import android.Manifest
 import android.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -48,7 +61,10 @@ import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.location.hasLocationPermission
+import com.evgenykon.travelguide.tts.PlaybackState
 import com.evgenykon.travelguide.util.Geo
+import com.evgenykon.travelguide.util.MapPoi
+import com.evgenykon.travelguide.util.MapPoiExtractor
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
@@ -68,6 +84,8 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
+import java.util.Locale
+import kotlin.math.roundToInt
 
 private const val SOURCE_POINTS_ENABLED = "points-enabled"
 private const val SOURCE_POINTS_DISABLED = "points-disabled"
@@ -95,11 +113,17 @@ fun MapScreen(container: AppContainer, navController: NavController) {
     val visiblePoints by vm.visiblePoints.collectAsStateWithLifecycle()
     val visitedPointIds by vm.visitedPointIds.collectAsStateWithLifecycle()
     val selectedPoint by vm.selectedPoint.collectAsStateWithLifecycle()
-    val createAt by vm.createAt.collectAsStateWithLifecycle()
+    val selectedPoi by vm.selectedPoi.collectAsStateWithLifecycle()
+    val selectedElevation by vm.selectedElevation.collectAsStateWithLifecycle()
+    val elevationLoading by vm.elevationLoading.collectAsStateWithLifecycle()
+    val createRequest by vm.createRequest.collectAsStateWithLifecycle()
     val previewRadius by vm.previewRadius.collectAsStateWithLifecycle()
+    val sheetOpen by vm.sheetOpen.collectAsStateWithLifecycle()
     val userLocation by vm.userLocation.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val pendingRouteId by container.pendingRouteId.collectAsStateWithLifecycle()
+    val playbackState by container.audioPlayer.state.collectAsStateWithLifecycle()
+    val playbackLabel by container.audioPlayer.label.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -175,14 +199,15 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                     ?.getStringProperty(PROP_ID)
                     ?.toLongOrNull()
                 when {
-                    id != null -> vm.selectPoint(id)
-                    vm.createAt.value != null -> vm.startCreate(latLng.latitude, latLng.longitude)
+                    id != null -> vm.selectPoint(id, queryPoi(map, latLng))
+                    vm.createRequest.value != null ->
+                        vm.startCreate(latLng.latitude, latLng.longitude, queryPoi(map, latLng))
                     else -> vm.selectPoint(null)
                 }
                 true
             }
             map.addOnMapLongClickListener { latLng ->
-                vm.startCreate(latLng.latitude, latLng.longitude)
+                vm.startCreate(latLng.latitude, latLng.longitude, queryPoi(map, latLng))
                 true
             }
         }
@@ -204,14 +229,16 @@ fun MapScreen(container: AppContainer, navController: NavController) {
             ?.setGeoJson(radiusFeatureCollection(visiblePoints))
     }
 
-    LaunchedEffect(mapReady, selectedPoint, createAt, previewRadius, settings.radiusMeters) {
+    LaunchedEffect(mapReady, selectedPoint, createRequest, previewRadius, settings.radiusMeters) {
         if (!mapReady) return@LaunchedEffect
         val style = styleRef ?: return@LaunchedEffect
+        val point = selectedPoint
+        val request = createRequest
         val collection = when {
-            selectedPoint != null -> radiusFeatureCollection(selectedPoint!!.lat, selectedPoint!!.lng, selectedPoint!!.radiusMeters)
-            createAt != null -> radiusFeatureCollection(
-                createAt!!.first,
-                createAt!!.second,
+            point != null -> radiusFeatureCollection(point.lat, point.lng, point.radiusMeters)
+            request != null -> radiusFeatureCollection(
+                request.lat,
+                request.lng,
                 previewRadius ?: settings.radiusMeters.toDouble()
             )
             else -> FeatureCollection.fromFeatures(emptyList())
@@ -284,9 +311,14 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                 ExtendedFloatingActionButton(
                     onClick = {
                         val target = vm.userLocation.value
-                            ?: mapRef?.cameraPosition?.target?.let { it.latitude to it.longitude }
+                            ?.let { LatLng(it.first, it.second) }
+                            ?: mapRef?.cameraPosition?.target
                         if (target != null) {
-                            vm.startCreate(target.first, target.second)
+                            vm.startCreate(
+                                target.latitude,
+                                target.longitude,
+                                mapRef?.let { queryPoi(it, target) }
+                            )
                         } else {
                             scope.launch {
                                 snackbarHostState.showSnackbar(
@@ -332,43 +364,229 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp)
             )
+
+            val calloutPoint = selectedPoint
+            if (calloutPoint != null && createRequest == null && !sheetOpen) {
+                PointCallout(
+                    point = calloutPoint,
+                    poi = selectedPoi,
+                    elevation = selectedElevation,
+                    elevationLoading = elevationLoading,
+                    playbackState = playbackState,
+                    onPlayPause = {
+                        when (playbackState) {
+                            PlaybackState.PLAYING -> container.audioPlayer.pause()
+                            PlaybackState.PAUSED -> container.audioPlayer.resume()
+                            PlaybackState.IDLE -> {
+                                val text = calloutPoint.description
+                                if (text.isBlank()) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("У точки нет описания")
+                                    }
+                                } else {
+                                    scope.launch {
+                                        vm.speak(text).onFailure {
+                                            snackbarHostState.showSnackbar(
+                                                it.message ?: "Не удалось озвучить"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onStop = { container.audioPlayer.stop() },
+                    onEdit = { vm.openSheet() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(12.dp)
+                )
+            }
+
+            if (playbackState != PlaybackState.IDLE && (calloutPoint == null || sheetOpen)) {
+                PlaybackPill(
+                    state = playbackState,
+                    label = playbackLabel,
+                    onPlayPause = {
+                        if (playbackState == PlaybackState.PLAYING) {
+                            container.audioPlayer.pause()
+                        } else {
+                            container.audioPlayer.resume()
+                        }
+                    },
+                    onStop = { container.audioPlayer.stop() },
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 12.dp, bottom = 64.dp)
+                )
+            }
         }
     }
 
-    if (selectedPoint != null || createAt != null) {
+    val sheetPoint = selectedPoint
+    if (createRequest != null || (sheetPoint != null && sheetOpen)) {
         PointSheet(
-            point = selectedPoint,
-            createAt = createAt,
+            point = sheetPoint,
+            createRequest = createRequest,
             routes = routes,
             defaultRadius = settings.radiusMeters,
             pendingRouteId = pendingRouteId ?: settings.routeFilterId,
-            isVisited = selectedPoint?.let { it.id in visitedPointIds } ?: false,
+            isVisited = sheetPoint?.let { it.id in visitedPointIds } ?: false,
+            suggestedPoi = createRequest?.poi ?: selectedPoi,
             onRadiusPreview = { vm.setPreviewRadius(it) },
             onDismiss = {
                 vm.selectPoint(null)
                 vm.cancelCreate()
+                vm.closeSheet()
                 container.pendingRouteId.value = null
             },
             onSave = {
                 vm.save(it)
                 vm.selectPoint(null)
                 vm.cancelCreate()
+                vm.closeSheet()
                 container.pendingRouteId.value = null
             },
             onDelete = {
                 vm.delete(it)
                 vm.selectPoint(null)
                 vm.cancelCreate()
+                vm.closeSheet()
                 container.pendingRouteId.value = null
             },
-            onGenerate = { name, lat, lng, hint ->
-                vm.generateDescription(name, lat, lng, hint)
+            onGenerate = { name, lat, lng, hint, poi ->
+                vm.generateDescription(name, lat, lng, hint, poi)
             },
             onSpeak = { text -> vm.speak(text) },
             onMessage = { message ->
                 scope.launch { snackbarHostState.showSnackbar(message) }
             }
         )
+    }
+}
+
+private fun queryPoi(map: MapLibreMap, latLng: LatLng): MapPoi? =
+    runCatching {
+        val screenPoint = map.projection.toScreenLocation(latLng)
+        MapPoiExtractor.extract(map.queryRenderedFeatures(screenPoint))
+    }.getOrNull()
+
+@Composable
+private fun PointCallout(
+    point: PointEntity,
+    poi: MapPoi?,
+    elevation: Double?,
+    elevationLoading: Boolean,
+    playbackState: PlaybackState,
+    onPlayPause: () -> Unit,
+    onStop: () -> Unit,
+    onEdit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                point.name,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                "OSM: " + (poi
+                    ?.let { listOfNotNull(it.name, it.category).joinToString(" — ") }
+                    ?: "нет данных"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                String.format(Locale.US, "%.5f, %.5f", point.lat, point.lng),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                when {
+                    elevationLoading -> "Высота: …"
+                    elevation != null -> "Высота: ${elevation.roundToInt()} м"
+                    else -> "Высота: нет данных"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onPlayPause) {
+                    Icon(
+                        if (playbackState == PlaybackState.PLAYING) {
+                            Icons.Default.Pause
+                        } else {
+                            Icons.Default.PlayArrow
+                        },
+                        contentDescription = "Играть или пауза"
+                    )
+                }
+                IconButton(
+                    onClick = onStop,
+                    enabled = playbackState != PlaybackState.IDLE
+                ) {
+                    Icon(Icons.Default.Stop, contentDescription = "Остановить")
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onEdit) {
+                    Text("Изменить")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaybackPill(
+    state: PlaybackState,
+    label: String?,
+    onPlayPause: () -> Unit,
+    onStop: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label ?: "Озвучка",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 150.dp)
+            )
+            IconButton(onClick = onPlayPause) {
+                Icon(
+                    if (state == PlaybackState.PLAYING) {
+                        Icons.Default.Pause
+                    } else {
+                        Icons.Default.PlayArrow
+                    },
+                    contentDescription = "Играть или пауза"
+                )
+            }
+            IconButton(onClick = onStop) {
+                Icon(Icons.Default.Stop, contentDescription = "Остановить")
+            }
+        }
     }
 }
 

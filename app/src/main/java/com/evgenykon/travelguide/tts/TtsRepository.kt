@@ -56,7 +56,9 @@ class TtsRepository(
     suspend fun speak(text: String, voice: String, speed: Double): Result<Unit> = runCatching {
         require(text.isNotBlank()) { "Описание пустое" }
         val file = ensureAudio(text, voice, speed)
-        withContext(Dispatchers.Main) { player.play(file) }
+        withContext(Dispatchers.Main) {
+            player.play(file, label = text.take(80))
+        }
     }
 
     fun stopPlayback() = player.stop()

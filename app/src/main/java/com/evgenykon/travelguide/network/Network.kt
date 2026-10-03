@@ -38,4 +38,7 @@ class Network {
 
     val yandexTtsApi: YandexTtsApi =
         retrofit("https://tts.api.cloud.yandex.net/").create(YandexTtsApi::class.java)
+
+    val openMeteoApi: OpenMeteoApi =
+        retrofit("https://api.open-meteo.com/").create(OpenMeteoApi::class.java)
 }

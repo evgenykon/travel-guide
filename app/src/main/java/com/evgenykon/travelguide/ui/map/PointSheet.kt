@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -25,6 +26,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
+import com.evgenykon.travelguide.util.MapPoi
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -52,33 +55,37 @@ import java.util.Locale
 @Composable
 fun PointSheet(
     point: PointEntity?,
-    createAt: Pair<Double, Double>?,
+    createRequest: CreateRequest?,
     routes: List<RouteEntity>,
     defaultRadius: Float,
     pendingRouteId: Long?,
     isVisited: Boolean,
+    suggestedPoi: MapPoi?,
     onRadiusPreview: (Double) -> Unit,
     onDismiss: () -> Unit,
     onSave: (PointEntity) -> Unit,
     onDelete: (PointEntity) -> Unit,
-    onGenerate: suspend (name: String, lat: Double, lng: Double, hint: String) -> Result<String>,
+    onGenerate: suspend (name: String, lat: Double, lng: Double, hint: String, poi: MapPoi?) -> Result<String>,
     onSpeak: suspend (String) -> Result<Unit>,
     onMessage: (String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    val lat = point?.lat ?: createAt?.first ?: 0.0
-    val lng = point?.lng ?: createAt?.second ?: 0.0
+    val lat = point?.lat ?: createRequest?.lat ?: 0.0
+    val lng = point?.lng ?: createRequest?.lng ?: 0.0
     val initialRadius = point?.radiusMeters ?: defaultRadius.toDouble()
 
-    var name by remember(point?.id, createAt) { mutableStateOf(point?.name ?: "") }
-    var description by remember(point?.id, createAt) { mutableStateOf(point?.description ?: "") }
-    var enabled by remember(point?.id, createAt) { mutableStateOf(point?.enabled ?: true) }
-    var radius by remember(point?.id, createAt) { mutableStateOf(initialRadius.toString()) }
-    var routeId by remember(point?.id, createAt) {
+    var name by remember(point?.id, createRequest) {
+        mutableStateOf(point?.name ?: suggestedPoi?.name.orEmpty())
+    }
+    var description by remember(point?.id, createRequest) { mutableStateOf(point?.description ?: "") }
+    var enabled by remember(point?.id, createRequest) { mutableStateOf(point?.enabled ?: true) }
+    var radius by remember(point?.id, createRequest) { mutableStateOf(initialRadius.toString()) }
+    var routeId by remember(point?.id, createRequest) {
         mutableStateOf(point?.routeId ?: pendingRouteId)
     }
+    var poi by remember(point?.id, createRequest) { mutableStateOf(suggestedPoi) }
     var routeMenuExpanded by remember { mutableStateOf(false) }
     var generating by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
@@ -111,6 +118,21 @@ fun PointSheet(
                 )
             }
 
+            poi?.let { objectPoi ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Объект OSM: ${objectPoi.name}" +
+                            (objectPoi.category?.let { " — $it" } ?: ""),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { poi = null }) {
+                        Icon(Icons.Default.Close, contentDescription = "Убрать объект")
+                    }
+                }
+            }
+
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -133,7 +155,7 @@ fun PointSheet(
                     onClick = {
                         generating = true
                         scope.launch {
-                            onGenerate(name, lat, lng, description)
+                            onGenerate(name, lat, lng, description, poi)
                                 .onSuccess { description = it }
                                 .onFailure { onMessage(it.message ?: "Не удалось сгенерировать описание") }
                             generating = false

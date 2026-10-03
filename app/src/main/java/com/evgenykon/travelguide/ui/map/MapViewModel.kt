@@ -6,6 +6,7 @@ import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.data.prefs.AppSettings
+import com.evgenykon.travelguide.util.MapPoi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class CreateRequest(
+    val lat: Double,
+    val lng: Double,
+    val poi: MapPoi? = null
+)
 
 class MapViewModel(private val container: AppContainer) : ViewModel() {
 
@@ -43,25 +50,62 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
         combine(points, selectedPointId) { list, id -> list.firstOrNull { it.id == id } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private val createAtState = MutableStateFlow<Pair<Double, Double>?>(null)
-    val createAt: StateFlow<Pair<Double, Double>?> = createAtState.asStateFlow()
+    private val selectedPoiState = MutableStateFlow<MapPoi?>(null)
+    val selectedPoi: StateFlow<MapPoi?> = selectedPoiState.asStateFlow()
+
+    private val selectedElevationState = MutableStateFlow<Double?>(null)
+    val selectedElevation: StateFlow<Double?> = selectedElevationState.asStateFlow()
+
+    private val elevationLoadingState = MutableStateFlow(false)
+    val elevationLoading: StateFlow<Boolean> = elevationLoadingState.asStateFlow()
+
+    private val sheetOpenState = MutableStateFlow(false)
+    val sheetOpen: StateFlow<Boolean> = sheetOpenState.asStateFlow()
+
+    private val createRequestState = MutableStateFlow<CreateRequest?>(null)
+    val createRequest: StateFlow<CreateRequest?> = createRequestState.asStateFlow()
 
     private val previewRadiusState = MutableStateFlow<Double?>(null)
     val previewRadius: StateFlow<Double?> = previewRadiusState.asStateFlow()
 
     val userLocation = MutableStateFlow<Pair<Double, Double>?>(null)
 
-    fun selectPoint(id: Long?) {
+    fun selectPoint(id: Long?, poi: MapPoi? = null) {
         selectedPointId.value = id
+        selectedPoiState.value = poi
+        selectedElevationState.value = null
+        val point = id?.let { pointId -> points.value.firstOrNull { it.id == pointId } }
+        if (point == null) {
+            sheetOpenState.value = false
+            return
+        }
+        viewModelScope.launch {
+            elevationLoadingState.value = true
+            selectedElevationState.value =
+                container.elevationRepository.elevation(point.lat, point.lng)
+            elevationLoadingState.value = false
+        }
     }
 
-    fun startCreate(lat: Double, lng: Double) {
+    fun openSheet() {
+        if (selectedPointId.value != null) {
+            sheetOpenState.value = true
+        }
+    }
+
+    fun closeSheet() {
+        sheetOpenState.value = false
+    }
+
+    fun startCreate(lat: Double, lng: Double, poi: MapPoi? = null) {
         selectedPointId.value = null
-        createAtState.value = lat to lng
+        selectedPoiState.value = null
+        sheetOpenState.value = false
+        createRequestState.value = CreateRequest(lat, lng, poi)
     }
 
     fun cancelCreate() {
-        createAtState.value = null
+        createRequestState.value = null
         previewRadiusState.value = null
     }
 
@@ -101,9 +145,19 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
         name: String,
         lat: Double,
         lng: Double,
-        hint: String
+        hint: String,
+        poi: MapPoi?
     ): Result<String> = runCatching {
-        container.aiRepository.generateDescription(settings.value.model, name, lat, lng, hint)
+        val current = settings.value
+        container.aiRepository.generateDescription(
+            model = current.model,
+            promptTemplate = current.promptTemplate,
+            name = name,
+            lat = lat,
+            lng = lng,
+            hint = hint,
+            poi = poi
+        )
     }
 
     suspend fun speak(text: String): Result<Unit> {

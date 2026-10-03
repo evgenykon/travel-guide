@@ -22,12 +22,33 @@ data class AppSettings(
     val radiusMeters: Float = 10f,
     val styleUrl: String = "",
     val trackingEnabled: Boolean = false,
-    val routeFilterId: Long? = null
+    val routeFilterId: Long? = null,
+    val promptTemplate: String = DEFAULT_PROMPT_TEMPLATE,
+    val xiaomiAutostartConfirmed: Boolean = false,
+    val xiaomiBatteryConfirmed: Boolean = false
 ) {
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-4o-mini"
         const val DEFAULT_VOICE = "alena"
         const val NO_ROUTE_FILTER = -1L
+
+        val DEFAULT_PROMPT_TEMPLATE = """
+            Составь описание конкретной точки на карте для путешественника.
+            Название: {name}
+            Координаты: {lat}, {lng}
+            Объект на карте (OSM): {object}
+            Заметка пользователя: {hint}
+
+            Структура ответа — сплошным текстом, на русском, без заголовков, нумерации и списков:
+            1) Основная часть: что это за место и его описание — 2 предложения.
+            2) Историческая значимость — 1 предложение. Если есть достоверные исторические данные (история создания, связанные события) — добавь ещё 4–6 предложений.
+            3) Если с местом связаны известные личности — добавь 2 предложения: имя, чем человек известен и что именно он делал в этом месте.
+
+            Требования:
+            — избегай общих фраз и описаний «в целом» — пиши именно об этой точке;
+            — не выдумывай факты: если достоверных данных нет, соответствующий пункт пропусти;
+            — можно упоминать авторов и создателей объекта.
+        """.trimIndent()
     }
 }
 
@@ -43,7 +64,10 @@ class SettingsStore(private val context: Context) {
             radiusMeters = prefs[KEY_RADIUS] ?: 10f,
             styleUrl = prefs[KEY_STYLE_URL] ?: "",
             trackingEnabled = prefs[KEY_TRACKING] ?: false,
-            routeFilterId = routeFilter.takeIf { it != AppSettings.NO_ROUTE_FILTER }
+            routeFilterId = routeFilter.takeIf { it != AppSettings.NO_ROUTE_FILTER },
+            promptTemplate = prefs[KEY_PROMPT] ?: AppSettings.DEFAULT_PROMPT_TEMPLATE,
+            xiaomiAutostartConfirmed = prefs[KEY_XIAOMI_AUTOSTART] ?: false,
+            xiaomiBatteryConfirmed = prefs[KEY_XIAOMI_BATTERY] ?: false
         )
     }
 
@@ -57,6 +81,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setRouteFilterId(id: Long?) = edit {
         it[KEY_ROUTE_FILTER] = id ?: AppSettings.NO_ROUTE_FILTER
     }
+    suspend fun setPromptTemplate(template: String) = edit { it[KEY_PROMPT] = template }
+    suspend fun resetPromptTemplate() = edit { it[KEY_PROMPT] = AppSettings.DEFAULT_PROMPT_TEMPLATE }
+    suspend fun setXiaomiAutostartConfirmed(value: Boolean) = edit { it[KEY_XIAOMI_AUTOSTART] = value }
+    suspend fun setXiaomiBatteryConfirmed(value: Boolean) = edit { it[KEY_XIAOMI_BATTERY] = value }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)
@@ -71,5 +99,8 @@ class SettingsStore(private val context: Context) {
         val KEY_STYLE_URL = stringPreferencesKey("style_url")
         val KEY_TRACKING = booleanPreferencesKey("tracking")
         val KEY_ROUTE_FILTER = longPreferencesKey("route_filter")
+        val KEY_PROMPT = stringPreferencesKey("prompt_template")
+        val KEY_XIAOMI_AUTOSTART = booleanPreferencesKey("xiaomi_autostart")
+        val KEY_XIAOMI_BATTERY = booleanPreferencesKey("xiaomi_battery")
     }
 }

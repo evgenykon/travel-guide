@@ -5,7 +5,7 @@ import com.evgenykon.travelguide.network.ChatMessage
 import com.evgenykon.travelguide.network.ChatRequest
 import com.evgenykon.travelguide.network.ModelDto
 import com.evgenykon.travelguide.network.OpenRouterApi
-import java.util.Locale
+import com.evgenykon.travelguide.util.MapPoi
 
 class AiRepository(
     private val secureStore: SecureStore,
@@ -32,27 +32,31 @@ class AiRepository(
 
     suspend fun generateDescription(
         model: String,
+        promptTemplate: String,
         name: String,
         lat: Double,
         lng: Double,
-        hint: String
+        hint: String,
+        poi: MapPoi?
     ): String {
         val key = secureStore.openRouterKey ?: error("OpenRouter не подключён")
-        val prompt = buildString {
-            appendLine("Составь описание точки на карте для путешественника.")
-            if (name.isNotBlank()) appendLine("Название: $name")
-            appendLine("Координаты: ${String.format(Locale.US, "%.5f, %.5f", lat, lng)}")
-            if (hint.isNotBlank()) appendLine("Заметка пользователя: $hint")
-            append("Ответь 2–4 предложениями на русском языке, без заголовков и списков.")
-        }
+        val prompt = PromptBuilder.build(
+            template = promptTemplate,
+            name = name,
+            lat = lat,
+            lng = lng,
+            hint = hint,
+            poi = poi
+        )
         val response = api.chatCompletions(
             authHeader(key),
             ChatRequest(
                 model = model,
                 messages = listOf(
-                    ChatMessage("system", "Ты — опытный экскурсовод и составитель путеводителей."),
+                    ChatMessage("system", SYSTEM_PROMPT),
                     ChatMessage("user", prompt)
-                )
+                ),
+                maxTokens = 900
             )
         )
         return response.choices.firstOrNull()?.message?.content?.trim().orEmpty()
@@ -60,4 +64,10 @@ class AiRepository(
     }
 
     private fun authHeader(key: String) = "Bearer $key"
+
+    private companion object {
+        const val SYSTEM_PROMPT =
+            "Ты — опытный экскурсовод и составитель путеводителей. " +
+                "Пишешь только достоверные факты и не выдумываешь."
+    }
 }
