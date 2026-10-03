@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Путеводитель</string>
+    <string name="notification_channel_tracking">Слежение</string>
+    <string name="notification_tracking_title">Слежение включено</string>
+    <string name="notification_tracking_text">Озвучивание точек поблизости</string>
+    <string name="notification_stop">Стоп</string>
+    <string name="notification_error_title">Не удалось озвучить: %1$s</string>
+    <string name="notification_error_text">Проверьте подключение Yandex SpeechKit</string>
+</resources>

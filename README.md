@@ -1,0 +1,96 @@
+# Путеводитель (Travel Guide)
+
+Android-приложение: карта MapLibre, точки с описаниями, автоматическая озвучка
+(Yandex SpeechKit) при входе в 10-метровую зону, генерация описаний через
+OpenRouter, маршруты и история. Всё хранится локально.
+
+## Возможности
+
+- **Карта MapLibre** с тайлами OpenStreetMap (русские подписи в России).
+  Тап по точке — карточка, долгое нажатие — новая точка, кнопка «Точка» — добавить
+  рядом с текущим местоположением.
+- **Описания**: вручную или через OpenRouter (модель выбирается из списка).
+- **Озвучка Yandex SpeechKit**: голос и скорость выбираются, аудио кэшируется,
+  кэш можно очистить.
+- **Геозоны 10 м**: foreground-сервис с уведомлением отслеживает позицию и
+  озвучивает описание при входе в зону (работает при выключенном экране).
+- **Маршруты**: создание, переименование, удаление, добавление/удаление точек.
+- **История**: срабатывания и прослушивания, повторное воспроизведение.
+- **Локальное хранение**: Room (точки, маршруты, история), DataStore (настройки),
+  EncryptedSharedPreferences (ключи и токены).
+
+## Подключение сервисов
+
+### Yandex SpeechKit (обязательно для озвучки)
+
+Приложение использует авторизованный ключ сервисного аккаунта (`key.json`):
+
+1. Войдите в Yandex Cloud → **Сервисные аккаунты** → создайте аккаунт.
+2. Назначьте роль `ai.speechkit-tts.user`.
+3. Создайте **авторизованный ключ** и скачайте `key.json`.
+4. В приложении: Настройки → Yandex SpeechKit → «Подключить key.json».
+   Файл можно выбрать или «поделиться» им в приложение из файлового менеджера.
+
+Приложение само обменяет ключ на IAM-токен (живёт 12 часов) и будет
+автоматически его обновлять.
+
+> OAuth-токены Яндекс ID больше не принимаются Yandex Cloud с 01.06.2026,
+> поэтому используется сервисный аккаунт — поддерживаемый способ.
+
+### OpenRouter (обязательно для генерации описаний)
+
+Настройки → OpenRouter → «Войти через OpenRouter». Откроется страница входа,
+после подтверждения приложение получит ключ и сохранит его зашифрованным.
+Отозвать ключ можно на https://openrouter.ai/keys.
+
+## Сборка
+
+Требуется JDK 17 и Android SDK (compileSdk 36). Локально:
+
+```bash
+./gradlew assembleDebug
+```
+
+APK: `app/build/outputs/apk/debug/app-debug.apk`.
+
+## CI/CD (GitHub Actions)
+
+- **Push в `main`** → тесты, lint, debug APK (артефакт) и обновляемый
+  pre-release `dev-latest` с debug APK.
+- **Тег `vX.Y.Z`** → подписанный release APK и GitHub Release.
+
+### Подписанные релизы
+
+Сгенерируйте keystore:
+
+```bash
+keytool -genkeypair -v -keystore release.jks -alias travel-guide \
+  -keyalg RSA -keysize 2048 -validity 10000
+base64 -i release.jks -o release.jks.base64   # macOS
+# base64 -w0 release.jks > release.jks.base64 # Linux
+```
+
+Добавьте в GitHub → Settings → Secrets and variables → Actions:
+
+| Секрет               | Значение                                   |
+|----------------------|--------------------------------------------|
+| `KEYSTORE_BASE64`    | содержимое `release.jks.base64`            |
+| `KEYSTORE_PASSWORD`  | пароль хранилища                           |
+| `KEY_ALIAS`          | `travel-guide`                             |
+| `KEY_PASSWORD`       | пароль ключа                               |
+
+Если секреты не заданы, release APK соберётся с debug-подписью (устанавливается,
+но не обновит установленную подписанную версию).
+
+### Выпуск релиза
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+## Технологии
+
+Kotlin · Jetpack Compose · MapLibre Native · Room · DataStore ·
+Retrofit/OkHttp · kotlinx.serialization · Play Services Location ·
+Yandex SpeechKit v1 TTS + v3 voices · OpenRouter API · GitHub Actions
