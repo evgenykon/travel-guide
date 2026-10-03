@@ -27,7 +27,7 @@ object MapPoiExtractor {
         "bridge", "tower", "ruins", "archaeological_site", "townhall",
         "courthouse", "embassy", "police", "fire_station", "post", "water",
         "river", "lake", "pond", "sea", "forest", "wood", "scrub", "grassland",
-        "residential", "commercial", "industrial", "building"
+        "residential", "commercial", "industrial"
     )
 
     private val categoryRu = mapOf(
