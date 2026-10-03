@@ -4,6 +4,8 @@
     <string name="notification_channel_tracking">Слежение</string>
     <string name="notification_tracking_title">Слежение включено</string>
     <string name="notification_tracking_text">Озвучивание точек поблизости</string>
+    <string name="notification_tracking_route">Активный маршрут: «%1$s»</string>
+    <string name="notification_tracking_no_route">Активный маршрут: все точки</string>
     <string name="notification_stop">Стоп</string>
     <string name="notification_error_title">Не удалось озвучить: %1$s</string>
     <string name="notification_error_text">Проверьте подключение Yandex SpeechKit</string>

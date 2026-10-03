@@ -26,10 +26,13 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -44,6 +47,8 @@ class TrackingService : Service() {
     private var pointsCache: List<PointEntity> = emptyList()
     private var visitedCache: Set<Long> = emptySet()
     private var pointsCacheAt = 0L
+    private var activeRouteName: String? = null
+    private var routeJob: Job? = null
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -86,6 +91,7 @@ class TrackingService : Service() {
                 minDistanceMeters = LOCATION_MIN_DISTANCE_M,
                 callback = locationCallback
             )
+            startRouteObserver()
             START_STICKY
         } catch (e: Exception) {
             stopSelf()
@@ -188,12 +194,46 @@ class TrackingService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(getString(R.string.notification_tracking_title))
-            .setContentText(getString(R.string.notification_tracking_text))
+            .setContentText(routeText())
             .setOngoing(true)
             .setContentIntent(contentIntent)
             .addAction(0, getString(R.string.notification_stop), stopIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
+
+    private fun routeText(): String {
+        val name = activeRouteName
+        return if (name.isNullOrBlank()) {
+            getString(R.string.notification_tracking_no_route)
+        } else {
+            getString(R.string.notification_tracking_route, name)
+        }
+    }
+
+    private fun startRouteObserver() {
+        if (routeJob?.isActive == true) return
+        routeJob = scope.launch {
+            container.settingsStore.settings
+                .map { it.routeFilterId }
+                .distinctUntilChanged()
+                .collect { routeId ->
+                    activeRouteName = routeId?.let { id ->
+                        runCatching { container.routeRepository.get(id)?.name }.getOrNull()
+                    }
+                    updateNotification()
+                }
+        }
+    }
+
+    private fun updateNotification() {
+        val canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        if (!canNotify) return
+        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, buildNotification())
     }
 
     private fun notifyError(pointName: String, message: String?) {
