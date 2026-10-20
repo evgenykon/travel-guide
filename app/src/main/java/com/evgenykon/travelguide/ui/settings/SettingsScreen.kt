@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -232,6 +233,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
     val tracking by TrackingService.isRunning.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
     val defaultPromptTemplate = stringResource(R.string.prompt_default)
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -241,6 +243,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
     var showTrackingSetup by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.refreshConnections() }
+    LaunchedEffect(locale) { vm.loadVoices() }
 
     LaunchedEffect(message) {
         message?.let {
