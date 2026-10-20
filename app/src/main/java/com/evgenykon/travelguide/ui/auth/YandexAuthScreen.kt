@@ -27,12 +27,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 
 data class YandexAuthUiState(
     val connected: Boolean = false,
@@ -50,7 +52,9 @@ class YandexAuthViewModel(private val container: AppContainer) : ViewModel() {
         container.yandexAuth.importKeyJson(keyJson)
             .onSuccess { state.value = buildState() }
             .onFailure {
-                state.value = buildState().copy(error = it.message ?: "Некорректный key.json")
+                state.value = buildState().copy(
+                    error = container.context.getString(R.string.yandex_invalid_key)
+                )
             }
     }
 
@@ -111,9 +115,9 @@ fun YandexAuthScreen(container: AppContainer) {
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text("Подключено", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.common_connected), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Сервисный аккаунт: ${state.serviceAccountId}",
+                            stringResource(R.string.yandex_service_account, state.serviceAccountId.orEmpty()),
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
@@ -126,12 +130,11 @@ fun YandexAuthScreen(container: AppContainer) {
                     onClick = { vm.disconnect() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Отключить")
+                    Text(stringResource(R.string.common_disconnect))
                 }
             } else {
                 Text(
-                    "Подключение выполняется авторизованным ключом сервисного аккаунта Yandex Cloud. " +
-                        "Приложение обменяет ключ на IAM-токен и будет автоматически его обновлять.",
+                    stringResource(R.string.yandex_connect_note),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Button(
@@ -140,20 +143,17 @@ fun YandexAuthScreen(container: AppContainer) {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Выбрать key.json")
+                    Text(stringResource(R.string.yandex_choose_key))
                 }
                 OutlinedButton(
                     onClick = { },
                     enabled = false,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Можно также «Поделиться» файлом key.json в приложение")
+                    Text(stringResource(R.string.yandex_share_hint))
                 }
                 Text(
-                    "Как получить ключ:\n" +
-                        "1. Yandex Cloud → Сервисные аккаунты → создать аккаунт.\n" +
-                        "2. Назначить роль ai.speechkit-tts.user.\n" +
-                        "3. Создать авторизованный ключ и скачать key.json.",
+                    stringResource(R.string.yandex_how_to),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

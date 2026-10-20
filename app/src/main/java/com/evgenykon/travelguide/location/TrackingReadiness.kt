@@ -10,7 +10,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import com.evgenykon.travelguide.R
 
 enum class ReadinessAction {
     REQUEST_PERMISSION,
@@ -23,8 +25,8 @@ enum class ReadinessAction {
 
 data class ReadinessItem(
     val id: String,
-    val title: String,
-    val description: String,
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
     val satisfied: Boolean,
     val required: Boolean,
     val action: ReadinessAction,
@@ -61,8 +63,8 @@ object TrackingReadiness {
         ) == PackageManager.PERMISSION_GRANTED
         items += ReadinessItem(
             id = ID_LOCATION,
-            title = "Точная геолокация",
-            description = "Нужна для отслеживания зон радиусом 10 м",
+            titleRes = R.string.readiness_location_title,
+            descriptionRes = R.string.readiness_location_desc,
             satisfied = fine,
             required = true,
             action = ReadinessAction.REQUEST_PERMISSION
@@ -75,8 +77,8 @@ object TrackingReadiness {
             ) == PackageManager.PERMISSION_GRANTED
         items += ReadinessItem(
             id = ID_BACKGROUND_LOCATION,
-            title = "Геолокация «Всегда»",
-            description = "Доступ к позиции в фоне и при выключенном экране",
+            titleRes = R.string.readiness_background_title,
+            descriptionRes = R.string.readiness_background_desc,
             satisfied = background,
             required = true,
             action = ReadinessAction.OPEN_APP_SETTINGS
@@ -93,8 +95,8 @@ object TrackingReadiness {
         }.getOrDefault(false)
         items += ReadinessItem(
             id = ID_LOCATION_ENABLED,
-            title = "Геолокация включена",
-            description = "GPS или определение по сети должны быть включены",
+            titleRes = R.string.readiness_enabled_title,
+            descriptionRes = R.string.readiness_enabled_desc,
             satisfied = locationEnabled,
             required = true,
             action = ReadinessAction.OPEN_LOCATION_SETTINGS
@@ -107,8 +109,8 @@ object TrackingReadiness {
             ) == PackageManager.PERMISSION_GRANTED
         items += ReadinessItem(
             id = ID_NOTIFICATIONS,
-            title = "Уведомления",
-            description = "Постоянное уведомление сервиса слежения",
+            titleRes = R.string.readiness_notifications_title,
+            descriptionRes = R.string.readiness_notifications_desc,
             satisfied = notifications,
             required = true,
             action = ReadinessAction.REQUEST_PERMISSION
@@ -118,8 +120,8 @@ object TrackingReadiness {
         val battery = powerManager.isIgnoringBatteryOptimizations(context.packageName)
         items += ReadinessItem(
             id = ID_BATTERY,
-            title = "Батарея без ограничений",
-            description = "Система не должна останавливать сервис в фоне",
+            titleRes = R.string.readiness_battery_title,
+            descriptionRes = R.string.readiness_battery_desc,
             satisfied = battery,
             required = true,
             action = ReadinessAction.REQUEST_BATTERY_OPTIMIZATION
@@ -128,9 +130,8 @@ object TrackingReadiness {
         if (isXiaomi()) {
             items += ReadinessItem(
                 id = ID_XIAOMI_AUTOSTART,
-                title = "Автозапуск (MIUI)",
-                description = "Настройки MIUI → Приложения → Разрешения → Автозапуск. " +
-                    "Отметьте вручную, если не удалось проверить автоматически",
+                titleRes = R.string.readiness_autostart_title,
+                descriptionRes = R.string.readiness_autostart_desc,
                 satisfied = manualAutostart,
                 required = true,
                 action = ReadinessAction.OPEN_MIUI_AUTOSTART,
@@ -138,8 +139,8 @@ object TrackingReadiness {
             )
             items += ReadinessItem(
                 id = ID_XIAOMI_BATTERY,
-                title = "Экономия батареи MIUI",
-                description = "MIUI → Батарея → Без ограничений для приложения",
+                titleRes = R.string.readiness_miui_battery_title,
+                descriptionRes = R.string.readiness_miui_battery_desc,
                 satisfied = manualBattery,
                 required = true,
                 action = ReadinessAction.OPEN_MIUI_BATTERY,

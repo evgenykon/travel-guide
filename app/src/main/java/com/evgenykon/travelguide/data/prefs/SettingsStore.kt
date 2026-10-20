@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.evgenykon.travelguide.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -74,7 +75,7 @@ class SettingsStore(private val context: Context) {
             styleUrl = prefs[KEY_STYLE_URL] ?: "",
             trackingEnabled = prefs[KEY_TRACKING] ?: false,
             routeFilterId = routeFilter.takeIf { it != AppSettings.NO_ROUTE_FILTER },
-            promptTemplate = prefs[KEY_PROMPT] ?: AppSettings.DEFAULT_PROMPT_TEMPLATE,
+            promptTemplate = prefs[KEY_PROMPT] ?: defaultPromptTemplate,
             xiaomiAutostartConfirmed = prefs[KEY_XIAOMI_AUTOSTART] ?: false,
             xiaomiBatteryConfirmed = prefs[KEY_XIAOMI_BATTERY] ?: false,
             lastLat = prefs[KEY_LAST_LAT],
@@ -93,13 +94,16 @@ class SettingsStore(private val context: Context) {
         it[KEY_ROUTE_FILTER] = id ?: AppSettings.NO_ROUTE_FILTER
     }
     suspend fun setPromptTemplate(template: String) = edit { it[KEY_PROMPT] = template }
-    suspend fun resetPromptTemplate() = edit { it[KEY_PROMPT] = AppSettings.DEFAULT_PROMPT_TEMPLATE }
+    suspend fun resetPromptTemplate() = edit { it[KEY_PROMPT] = defaultPromptTemplate }
     suspend fun setXiaomiAutostartConfirmed(value: Boolean) = edit { it[KEY_XIAOMI_AUTOSTART] = value }
     suspend fun setXiaomiBatteryConfirmed(value: Boolean) = edit { it[KEY_XIAOMI_BATTERY] = value }
     suspend fun setLastLocation(lat: Double, lng: Double) = edit {
         it[KEY_LAST_LAT] = lat
         it[KEY_LAST_LNG] = lng
     }
+
+    val defaultPromptTemplate: String
+        get() = context.getString(R.string.prompt_default)
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)

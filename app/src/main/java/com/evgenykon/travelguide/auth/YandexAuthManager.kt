@@ -1,5 +1,7 @@
 package com.evgenykon.travelguide.auth
 
+import android.content.Context
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.prefs.SecureStore
 import com.evgenykon.travelguide.network.IamTokenRequest
 import com.evgenykon.travelguide.network.YandexIamApi
@@ -10,6 +12,7 @@ import retrofit2.HttpException
 import java.time.Instant
 
 class YandexAuthManager(
+    private val context: Context,
     private val secureStore: SecureStore,
     private val iamApi: YandexIamApi
 ) {
@@ -44,13 +47,13 @@ class YandexAuthManager(
                 return@withLock cached
             }
         }
-        val key = currentKey() ?: error("Yandex SpeechKit не подключён")
+        val key = currentKey() ?: error(context.getString(R.string.error_yandex_not_connected))
         val jwt = YandexJwt.build(key)
         val response = try {
             iamApi.createToken(IamTokenRequest(jwt = jwt))
         } catch (e: HttpException) {
             throw IllegalStateException(
-                "Yandex IAM отклонил ключ (HTTP ${e.code()})${e.responseDetails()}",
+                context.getString(R.string.error_iam_rejected, e.code()) + e.responseDetails(),
                 e
             )
         }

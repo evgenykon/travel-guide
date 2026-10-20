@@ -1,11 +1,18 @@
 package com.evgenykon.travelguide.util
 
 import org.maplibre.geojson.Feature
+import java.util.Locale
 
 data class MapPoi(
     val name: String,
-    val category: String?
+    val category: String?,
+    val categoryKey: String? = null
 )
+
+fun MapPoi.localizedCategory(locale: Locale): String? =
+    if (locale.language == "en") (categoryKey?.replace('_', ' ') ?: category) else category
+
+fun MapPoi.localized(locale: Locale): MapPoi = copy(category = localizedCategory(locale))
 
 object MapPoiExtractor {
 
@@ -105,17 +112,17 @@ object MapPoiExtractor {
         "building" to "здание"
     )
 
-    private data class Candidate(val name: String, val category: String?, val priority: Int)
+    private data class Candidate(val name: String, val category: String?, val categoryKey: String?, val priority: Int)
 
-    fun extract(features: List<Feature>): MapPoi? {
-        val candidates = features.mapNotNull { feature -> candidate(feature) }
-        return candidates.minByOrNull { it.priority }?.let { MapPoi(it.name, it.category) }
+    fun extract(features: List<Feature>, language: String = "ru"): MapPoi? {
+        val candidates = features.mapNotNull { feature -> candidate(feature, language) }
+        return candidates.minByOrNull { it.priority }?.let { MapPoi(it.name, it.category, it.categoryKey) }
     }
 
-    private fun candidate(feature: Feature): Candidate? {
+    private fun candidate(feature: Feature, language: String): Candidate? {
         if (feature.getStringProperty("id") != null) return null
 
-        val name = feature.getStringProperty("name:ru")?.takeIf { it.isNotBlank() }
+        val name = feature.getStringProperty("name:$language")?.takeIf { it.isNotBlank() }
             ?: feature.getStringProperty("name")?.takeIf { it.isNotBlank() }
             ?: feature.getStringProperty("name:latin")?.takeIf { it.isNotBlank() }
             ?: return null
@@ -123,7 +130,8 @@ object MapPoiExtractor {
         val cls = feature.getStringProperty("class")?.lowercase()
         if (cls != null && cls in placeClasses) return null
 
-        return Candidate(name, categoryOf(feature), priority(cls))
+        val (category, categoryKey) = categoryOf(feature)
+        return Candidate(name, category, categoryKey, priority(cls))
     }
 
     private fun priority(cls: String?): Int = when {
@@ -134,14 +142,14 @@ object MapPoiExtractor {
         else -> 3
     }
 
-    private fun categoryOf(feature: Feature): String? {
+    private fun categoryOf(feature: Feature): Pair<String?, String?> {
         val raw = listOf(
             "class", "subclass", "type", "amenity", "tourism", "shop",
             "historic", "leisure", "natural", "waterway", "railway", "highway"
         ).firstNotNullOfOrNull { key ->
             feature.getStringProperty(key)?.takeIf { it.isNotBlank() }
-        } ?: return null
+        } ?: return null to null
         val normalized = raw.lowercase()
-        return categoryRu[normalized] ?: normalized.replace('_', ' ')
+        return (categoryRu[normalized] ?: normalized.replace('_', ' ')) to normalized
     }
 }

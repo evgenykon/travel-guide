@@ -1,6 +1,7 @@
 package com.evgenykon.travelguide.tts
 
 import android.content.Context
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.auth.YandexAuthManager
 import com.evgenykon.travelguide.network.VoiceDto
 import com.evgenykon.travelguide.network.YandexTtsApi
@@ -13,7 +14,7 @@ import java.io.File
 import java.util.Locale
 
 class TtsRepository(
-    context: Context,
+    private val context: Context,
     private val auth: YandexAuthManager,
     private val api: YandexTtsApi,
     private val player: AudioPlayer
@@ -41,7 +42,7 @@ class TtsRepository(
 
             val body = synthesizeWithRetry(text, voice, speed)
             val bytes = body.use { it.bytes() }
-            require(bytes.isNotEmpty()) { "Пустой аудиоответ от Yandex SpeechKit" }
+            require(bytes.isNotEmpty()) { context.getString(R.string.error_tts_empty_response) }
 
             target.parentFile?.mkdirs()
             val tmp = File(target.parentFile, target.name + ".tmp")
@@ -54,7 +55,7 @@ class TtsRepository(
         }
 
     suspend fun speak(text: String, voice: String, speed: Double): Result<Unit> = runCatching {
-        require(text.isNotBlank()) { "Описание пустое" }
+        require(text.isNotBlank()) { context.getString(R.string.error_description_empty) }
         val file = ensureAudio(text, voice, speed)
         withContext(Dispatchers.Main) {
             player.play(file, label = text.take(80))
@@ -83,13 +84,14 @@ class TtsRepository(
                     )
                 } catch (retry: HttpException) {
                     throw IllegalStateException(
-                        "Yandex TTS отклонил запрос (HTTP ${retry.code()})${retry.responseDetails()}",
+                        context.getString(R.string.error_tts_rejected, retry.code()) +
+                            retry.responseDetails(),
                         retry
                     )
                 }
             } else {
                 throw IllegalStateException(
-                    "Yandex TTS: HTTP ${e.code()}${e.responseDetails()}",
+                    context.getString(R.string.error_tts_http, e.code()) + e.responseDetails(),
                     e
                 )
             }
@@ -100,7 +102,10 @@ class TtsRepository(
         auth.getIamToken(forceRefresh)
     } catch (e: Exception) {
         throw IllegalStateException(
-            "Ошибка ключа Yandex SpeechKit: ${e.message ?: "неизвестная ошибка"}",
+            context.getString(
+                R.string.error_key_yandex,
+                e.message ?: context.getString(R.string.common_unknown_error)
+            ),
             e
         )
     }

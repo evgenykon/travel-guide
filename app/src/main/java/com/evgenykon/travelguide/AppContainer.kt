@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 class AppContainer(context: Context) {
 
+    val context: Context = context.applicationContext
+
     val db: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -34,16 +36,20 @@ class AppContainer(context: Context) {
 
     private val network = Network()
 
-    val yandexAuth = YandexAuthManager(secureStore, network.yandexIamApi)
+    val yandexAuth = YandexAuthManager(context.applicationContext, secureStore, network.yandexIamApi)
     val openRouterOAuth = OpenRouterOAuth(network.openRouterApi)
-    val aiRepository = AiRepository(secureStore, network.openRouterApi)
+    val aiRepository = AiRepository(context.applicationContext, secureStore, network.openRouterApi)
     val elevationRepository = ElevationRepository(network.openMeteoApi)
-    val addressRepository = AddressRepository(network.nominatimApi)
+    val addressRepository = AddressRepository(
+        api = network.nominatimApi,
+        language = { context.resources.configuration.locales[0].language },
+        formatHouse = { road, house -> context.getString(R.string.address_with_house, road, house) }
+    )
 
     val pointRepository = PointRepository(db.pointDao())
     val routeRepository = RouteRepository(db.routeDao(), db.pointDao())
     val historyRepository = HistoryRepository(db.historyDao())
-    val backupRepository = BackupRepository(db)
+    val backupRepository = BackupRepository(context.applicationContext, db)
     val settingsBackupRepository = SettingsBackupRepository(settingsStore)
 
     val audioPlayer = AudioPlayer(context.applicationContext)

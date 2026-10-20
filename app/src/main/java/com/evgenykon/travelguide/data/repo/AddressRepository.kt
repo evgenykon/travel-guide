@@ -15,7 +15,13 @@ data class PlaceInfo(
             ?.joinToString(", ")
 }
 
-class AddressRepository(private val api: NominatimApi) {
+class AddressRepository(
+    private val api: NominatimApi,
+    private val language: () -> String = { "ru" },
+    private val formatHouse: (road: String, house: String) -> String = { road, house ->
+        "$road, д. $house"
+    }
+) {
 
     private val cache = Collections.synchronizedMap(HashMap<String, PlaceInfo?>())
 
@@ -24,12 +30,12 @@ class AddressRepository(private val api: NominatimApi) {
         if (cache.containsKey(key)) return cache[key]
 
         val value = runCatching {
-            val response = api.reverse(latitude = lat, longitude = lng)
+            val response = api.reverse(latitude = lat, longitude = lng, language = language())
             val address = response.address
             val road = address?.road?.trim()?.takeIf { it.isNotBlank() }
             val house = address?.houseNumber?.trim()?.takeIf { it.isNotBlank() }
             val addressText = when {
-                road != null && house != null -> "$road, д. $house"
+                road != null && house != null -> formatHouse(road, house)
                 road != null -> road
                 else -> response.displayName
                     ?.split(",")

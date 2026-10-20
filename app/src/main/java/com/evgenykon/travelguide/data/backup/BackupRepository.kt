@@ -1,5 +1,7 @@
 package com.evgenykon.travelguide.data.backup
 
+import android.content.Context
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.db.AppDatabase
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
@@ -11,7 +13,7 @@ data class ImportResult(
     val pointsSkipped: Int
 )
 
-class BackupRepository(private val db: AppDatabase) {
+class BackupRepository(private val context: Context, private val db: AppDatabase) {
 
     private val json = Json {
         prettyPrint = true
@@ -48,7 +50,8 @@ class BackupRepository(private val db: AppDatabase) {
             existingRouteNames = existingRoutes.map { it.name }.toSet(),
             existingPointKeys = existingPoints
                 .map { BackupPlanner.pointKey(it.name, it.lat, it.lng) }
-                .toSet()
+                .toSet(),
+            routeFallback = context.getString(R.string.common_route)
         )
 
         val routeIds = existingRoutes
@@ -66,7 +69,7 @@ class BackupRepository(private val db: AppDatabase) {
             pointDao.insert(
                 PointEntity(
                     routeId = routeId,
-                    name = planned.point.name.trim().ifBlank { "Точка" },
+                    name = planned.point.name.trim().ifBlank { context.getString(R.string.common_point) },
                     lat = planned.point.lat,
                     lng = planned.point.lng,
                     description = planned.point.description,

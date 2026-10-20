@@ -11,7 +11,8 @@ object BackupPlanner {
     fun plan(
         backup: BackupFile,
         existingRouteNames: Set<String>,
-        existingPointKeys: Set<String>
+        existingPointKeys: Set<String>,
+        routeFallback: String = "Маршрут"
     ): ImportPlan {
         val routesToCreate = mutableListOf<String>()
         val pointsToCreate = mutableListOf<PlannedPoint>()
@@ -19,7 +20,7 @@ object BackupPlanner {
         val knownPoints = existingPointKeys.toMutableSet()
 
         for (route in backup.routes) {
-            val name = route.name.trim().ifBlank { "Маршрут" }
+            val name = route.name.trim().ifBlank { routeFallback }
             if (name.lowercase() !in knownRoutes) {
                 knownRoutes += name.lowercase()
                 routesToCreate += name

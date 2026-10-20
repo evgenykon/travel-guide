@@ -1,5 +1,6 @@
 package com.evgenykon.travelguide.ui.settings
 
+import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,6 +55,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.BuildConfig
 import com.evgenykon.travelguide.data.backup.ImportResult
 import com.evgenykon.travelguide.data.prefs.AppSettings
@@ -116,7 +119,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val deleted = container.ttsRepository.clearCache()
             cacheSizeState.value = container.ttsRepository.cacheSizeBytes()
-            messageState.value = "Удалено файлов: $deleted"
+            messageState.value = container.context.getString(R.string.settings_deleted_files, deleted)
         }
     }
 
@@ -134,7 +137,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
             loadingModelsState.value = true
             runCatching { container.aiRepository.listModels() }
                 .onSuccess { modelsState.value = it }
-                .onFailure { messageState.value = it.message ?: "Не удалось загрузить модели" }
+                .onFailure {
+                    messageState.value = container.context.getString(R.string.settings_models_error)
+                }
             loadingModelsState.value = false
         }
     }
@@ -175,8 +180,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         val current = settings.value
         viewModelScope.launch {
             container.ttsRepository
-                .speak("Привет! Это тест озвучки Solo Traveler’s Guide.", current.voice, current.speed.toDouble())
-                .onFailure { messageState.value = it.message ?: "Не удалось озвучить" }
+                .speak(container.context.getString(R.string.settings_test_phrase), current.voice, current.speed.toDouble())
+                .onFailure {
+                    messageState.value = container.context.getString(R.string.settings_test_error)
+                }
         }
     }
 
@@ -225,6 +232,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
     val tracking by TrackingService.isRunning.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val defaultPromptTemplate = stringResource(R.string.prompt_default)
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -250,11 +258,11 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     val json = vm.exportSettingsJson()
                     context.contentResolver.openOutputStream(uri)?.use {
                         it.write(json.toByteArray(Charsets.UTF_8))
-                    } ?: error("Не удалось открыть файл")
+                    } ?: error(context.getString(R.string.settings_file_open_error))
                 }.onSuccess {
-                    snackbarHostState.showSnackbar("Настройки экспортированы")
+                    snackbarHostState.showSnackbar(context.getString(R.string.settings_export_settings_done))
                 }.onFailure {
-                    snackbarHostState.showSnackbar(it.message ?: "Ошибка экспорта настроек")
+                    snackbarHostState.showSnackbar(context.getString(R.string.settings_export_settings_error))
                 }
             }
         }
@@ -269,13 +277,16 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     val text = context.contentResolver.openInputStream(uri)
                         ?.bufferedReader()
                         ?.use { it.readText() }
-                        ?: error("Не удалось прочитать файл")
+                        ?: error(context.getString(R.string.settings_file_read_error))
                     vm.importSettingsJson(text)
                 }.onSuccess {
-                    snackbarHostState.showSnackbar("Настройки импортированы")
+                    snackbarHostState.showSnackbar(context.getString(R.string.settings_import_settings_done))
                 }.onFailure {
                     snackbarHostState.showSnackbar(
-                        "Ошибка импорта настроек: ${it.message ?: "неизвестная"}"
+                        context.getString(
+                            R.string.settings_import_settings_error,
+                            it.message ?: context.getString(R.string.common_unknown_error)
+                        )
                     )
                 }
             }
@@ -291,11 +302,11 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     val json = vm.exportJson()
                     context.contentResolver.openOutputStream(uri)?.use {
                         it.write(json.toByteArray(Charsets.UTF_8))
-                    } ?: error("Не удалось открыть файл")
+                    } ?: error(context.getString(R.string.settings_file_open_error))
                 }.onSuccess {
-                    snackbarHostState.showSnackbar("Экспорт завершён")
+                    snackbarHostState.showSnackbar(context.getString(R.string.settings_export_done))
                 }.onFailure {
-                    snackbarHostState.showSnackbar(it.message ?: "Ошибка экспорта")
+                    snackbarHostState.showSnackbar(context.getString(R.string.settings_export_error))
                 }
             }
         }
@@ -310,22 +321,31 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     val text = context.contentResolver.openInputStream(uri)
                         ?.bufferedReader()
                         ?.use { it.readText() }
-                        ?: error("Не удалось прочитать файл")
+                        ?: error(context.getString(R.string.settings_file_read_error))
                     vm.importJson(text)
                 }.onSuccess { result ->
                     snackbarHostState.showSnackbar(
-                        "Импорт: маршрутов +${result.routesAdded}, " +
-                            "точек +${result.pointsAdded}, пропущено ${result.pointsSkipped}"
+                        context.getString(
+                            R.string.settings_import_done,
+                            result.routesAdded,
+                            result.pointsAdded,
+                            result.pointsSkipped
+                        )
                     )
                 }.onFailure {
-                    snackbarHostState.showSnackbar("Ошибка импорта: ${it.message ?: "неизвестная"}")
+                    snackbarHostState.showSnackbar(
+                        context.getString(
+                            R.string.settings_import_error,
+                            it.message ?: context.getString(R.string.common_unknown_error)
+                        )
+                    )
                 }
             }
         }
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Настройки") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
@@ -342,14 +362,17 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     onClick = { navController.navigate("auth/yandex") },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (yandexConnected) "Управлять подключением" else "Подключить key.json")
+                    Text(
+                        if (yandexConnected) stringResource(R.string.common_manage_connection)
+                        else stringResource(R.string.settings_connect_key)
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(
                         onClick = { showVoiceDialog = true },
                         enabled = yandexConnected
                     ) {
-                        Text("Голос: ${settings.voice}")
+                        Text(stringResource(R.string.settings_voice, settings.voice))
                     }
                     Spacer(Modifier.width(8.dp))
                     if (loadingVoices) {
@@ -365,7 +388,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     enabled = yandexConnected,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Проверить озвучку")
+                    Text(stringResource(R.string.settings_test_voice))
                 }
             }
 
@@ -375,7 +398,10 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     onClick = { navController.navigate("auth/openrouter") },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (orConnected) "Управлять подключением" else "Войти через OpenRouter")
+                    Text(
+                        if (orConnected) stringResource(R.string.common_manage_connection)
+                        else stringResource(R.string.settings_enter_or)
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(
@@ -385,7 +411,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                         },
                         enabled = orConnected
                     ) {
-                        Text("Модель: ${settings.model}")
+                        Text(stringResource(R.string.settings_model, settings.model))
                     }
                     Spacer(Modifier.width(8.dp))
                     if (loadingModels) {
@@ -394,29 +420,29 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                 }
             }
 
-            SettingsSection("Озвучка") {
+            SettingsSection(stringResource(R.string.settings_playback)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Автовоспроизведение", Modifier.weight(1f))
+                    Text(stringResource(R.string.settings_autoplay), Modifier.weight(1f))
                     Switch(
                         checked = settings.autoPlay,
                         onCheckedChange = { vm.setAutoPlay(it) }
                     )
                 }
                 Text(
-                    "Кэш озвучки: ${formatSize(cacheSize)}",
+                    stringResource(R.string.settings_cache, formatSize(context, cacheSize)),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 OutlinedButton(
                     onClick = { vm.clearCache() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Очистить кэш озвучки")
+                    Text(stringResource(R.string.settings_clear_cache))
                 }
             }
 
-            SettingsSection("Слежение") {
+            SettingsSection(stringResource(R.string.settings_tracking)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Слежение за геопозицией", Modifier.weight(1f))
+                    Text(stringResource(R.string.settings_tracking_switch), Modifier.weight(1f))
                     Switch(
                         checked = tracking,
                         onCheckedChange = { checked ->
@@ -430,45 +456,40 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     )
                 }
                 Text(
-                    "При входе в 10-метровую зону точки приложение озвучит её описание один раз. " +
-                        "Повторная озвучка — после удаления записи в «Истории». " +
-                        "Работает при выключенном экране (постоянное уведомление).",
+                    stringResource(R.string.settings_tracking_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            SettingsSection("Карта") {
+            SettingsSection(stringResource(R.string.settings_map)) {
                 OutlinedTextField(
                     value = settings.styleUrl,
                     onValueChange = { vm.setStyleUrl(it) },
-                    label = { Text("URL стиля MapLibre (необязательно)") },
+                    label = { Text(stringResource(R.string.settings_style_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
                 Text(
-                    "Пусто — встроенный векторный стиль OpenFreeMap (русские подписи)",
+                    stringResource(R.string.settings_style_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            SettingsSection("Промпт генерации описаний") {
+            SettingsSection(stringResource(R.string.settings_prompt)) {
                 var promptDraft by remember(settings.promptTemplate) {
                     mutableStateOf(settings.promptTemplate)
                 }
                 Text(
-                    "Подстановки: {name} — название точки, {address} — улица и дом, " +
-                        "{object} — объект OSM под точкой, {hint} — текст поля «Описание». " +
-                        "Также доступны {lat} и {lng}. " +
-                        "Системная роль («экскурсовод, только достоверные факты») задана приложением.",
+                    stringResource(R.string.settings_prompt_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = promptDraft,
                     onValueChange = { promptDraft = it },
-                    label = { Text("Шаблон промпта") },
+                    label = { Text(stringResource(R.string.settings_prompt_template)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 220.dp)
@@ -478,24 +499,23 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                         onClick = { vm.setPromptTemplate(promptDraft) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Сохранить")
+                        Text(stringResource(R.string.common_save))
                     }
                     OutlinedButton(
                         onClick = {
-                            promptDraft = AppSettings.DEFAULT_PROMPT_TEMPLATE
+                            promptDraft = defaultPromptTemplate
                             vm.resetPromptTemplate()
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Сбросить")
+                        Text(stringResource(R.string.settings_reset))
                     }
                 }
             }
 
-            SettingsSection("Данные: импорт и экспорт") {
+            SettingsSection(stringResource(R.string.settings_data)) {
                 Text(
-                    "Сохраняет маршруты и точки (включая описания) в JSON-файл. " +
-                        "Импорт добавляет данные и пропускает уже существующие точки.",
+                    stringResource(R.string.settings_data_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -507,16 +527,16 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Экспорт маршрутов и точек")
+                    Text(stringResource(R.string.settings_export_routes))
                 }
                 OutlinedButton(
                     onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Импорт маршрутов и точек")
+                    Text(stringResource(R.string.settings_import_routes))
                 }
                 Text(
-                    "Настройки: промпт, модель OpenRouter, голос, скорость, радиус и стиль карты.",
+                    stringResource(R.string.settings_backup_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -528,7 +548,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Экспорт настроек")
+                    Text(stringResource(R.string.settings_export_settings))
                 }
                 OutlinedButton(
                     onClick = {
@@ -536,12 +556,12 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Импорт настроек")
+                    Text(stringResource(R.string.settings_import_settings))
                 }
             }
 
-            SettingsSection("О приложении") {
-                Text("Solo Traveler’s Guide ${BuildConfig.VERSION_NAME}")
+            SettingsSection(stringResource(R.string.settings_about)) {
+                Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME))
                 Text(
                     "MapLibre · Yandex SpeechKit · OpenRouter",
                     style = MaterialTheme.typography.bodySmall,
@@ -562,7 +582,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
     if (showVoiceDialog) {
         AlertDialog(
             onDismissRequest = { showVoiceDialog = false },
-            title = { Text("Голос озвучки") },
+            title = { Text(stringResource(R.string.settings_voice_dialog)) },
             text = {
                 LazyColumn(Modifier.heightIn(max = 400.dp)) {
                     items(voices, key = { it.name }) { voice ->
@@ -573,13 +593,21 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(voice.displayName)
+                            val genderLabel = when (voice.gender?.uppercase()) {
+                                "FEMALE" -> stringResource(R.string.voice_female)
+                                "MALE" -> stringResource(R.string.voice_male)
+                                else -> null
+                            }
+                            Text(
+                                if (genderLabel != null) "${voice.name} ($genderLabel)"
+                                else voice.name
+                            )
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showVoiceDialog = false }) { Text("Закрыть") }
+                TextButton(onClick = { showVoiceDialog = false }) { Text(stringResource(R.string.common_close)) }
             }
         )
     }
@@ -593,13 +621,13 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
         }
         AlertDialog(
             onDismissRequest = { showModelDialog = false },
-            title = { Text("Модель OpenRouter") },
+            title = { Text(stringResource(R.string.settings_model_dialog)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("Поиск") },
+                        label = { Text(stringResource(R.string.common_search)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -640,7 +668,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showModelDialog = false }) { Text("Закрыть") }
+                TextButton(onClick = { showModelDialog = false }) { Text(stringResource(R.string.common_close)) }
             }
         )
     }
@@ -665,7 +693,8 @@ private fun SettingsSection(title: String, content: @Composable () -> Unit) {
 private fun ConnectionStatus(connected: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = if (connected) "● Подключено" else "● Не подключено",
+            text = if (connected) stringResource(R.string.common_connected)
+            else stringResource(R.string.common_not_connected),
             color = if (connected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -678,7 +707,7 @@ private fun SpeedSlider(speed: Float, onSpeedChange: (Float) -> Unit) {
     LaunchedEffect(speed) { local = speed }
     Column {
         Text(
-            "Скорость речи: ${String.format(Locale.US, "%.2f", local)}",
+            stringResource(R.string.settings_speed, String.format(Locale.US, "%.2f", local)),
             style = MaterialTheme.typography.bodyMedium
         )
         Slider(
@@ -690,9 +719,15 @@ private fun SpeedSlider(speed: Float, onSpeedChange: (Float) -> Unit) {
     }
 }
 
-private fun formatSize(bytes: Long): String = when {
-    bytes <= 0L -> "0 Б"
-    bytes < 1024L -> "$bytes Б"
-    bytes < 1024L * 1024L -> String.format(Locale.US, "%.1f КБ", bytes / 1024.0)
-    else -> String.format(Locale.US, "%.1f МБ", bytes / 1024.0 / 1024.0)
+private fun formatSize(context: Context, bytes: Long): String = when {
+    bytes <= 0L -> context.getString(R.string.settings_size_zero)
+    bytes < 1024L -> context.getString(R.string.settings_size_bytes, bytes)
+    bytes < 1024L * 1024L -> context.getString(
+        R.string.settings_size_kb,
+        String.format(Locale.US, "%.1f", bytes / 1024.0)
+    )
+    else -> context.getString(
+        R.string.settings_size_mb,
+        String.format(Locale.US, "%.1f", bytes / 1024.0 / 1024.0)
+    )
 }

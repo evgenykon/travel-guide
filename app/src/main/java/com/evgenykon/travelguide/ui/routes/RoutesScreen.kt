@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +41,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.db.RouteWithCount
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -77,13 +79,13 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
     var nameInput by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Маршруты") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.common_routes)) }) },
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 nameInput = ""
                 createDialog = true
             }) {
-                Icon(Icons.Default.Add, contentDescription = "Создать маршрут")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.routes_create_cd))
             }
         }
     ) { padding ->
@@ -95,7 +97,7 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "Пока нет маршрутов.\nСоздайте первый маршрут.",
+                    stringResource(R.string.routes_empty),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -118,7 +120,7 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
                             Column(Modifier.weight(1f)) {
                                 Text(route.name, style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Точек: ${route.pointCount}",
+                                    stringResource(R.string.routes_points_count, route.pointCount),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -127,10 +129,10 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
                                 nameInput = route.name
                                 renameTarget = route
                             }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Переименовать")
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.common_rename))
                             }
                             IconButton(onClick = { deleteTarget = route }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete))
                             }
                         }
                     }
@@ -142,12 +144,12 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
     if (createDialog) {
         AlertDialog(
             onDismissRequest = { createDialog = false },
-            title = { Text("Новый маршрут") },
+            title = { Text(stringResource(R.string.routes_new)) },
             text = {
                 OutlinedTextField(
                     value = nameInput,
                     onValueChange = { nameInput = it },
-                    label = { Text("Название") },
+                    label = { Text(stringResource(R.string.point_name)) },
                     singleLine = true
                 )
             },
@@ -160,11 +162,11 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
                         createDialog = false
                     }
                 ) {
-                    Text("Создать")
+                    Text(stringResource(R.string.routes_create))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { createDialog = false }) { Text("Отмена") }
+                TextButton(onClick = { createDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -172,12 +174,12 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
     renameTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { renameTarget = null },
-            title = { Text("Переименовать маршрут") },
+            title = { Text(stringResource(R.string.routes_rename_title)) },
             text = {
                 OutlinedTextField(
                     value = nameInput,
                     onValueChange = { nameInput = it },
-                    label = { Text("Название") },
+                    label = { Text(stringResource(R.string.point_name)) },
                     singleLine = true
                 )
             },
@@ -190,11 +192,11 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
                         renameTarget = null
                     }
                 ) {
-                    Text("Сохранить")
+                    Text(stringResource(R.string.routes_save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { renameTarget = null }) { Text("Отмена") }
+                TextButton(onClick = { renameTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -202,18 +204,18 @@ fun RoutesScreen(container: AppContainer, navController: NavController) {
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Удалить маршрут?") },
-            text = { Text("Маршрут «${target.name}» будет удалён. Точки останутся на карте.") },
+            title = { Text(stringResource(R.string.routes_delete_title)) },
+            text = { Text(stringResource(R.string.routes_delete_message, target.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     vm.delete(target.id)
                     deleteTarget = null
                 }) {
-                    Text("Удалить")
+                    Text(stringResource(R.string.common_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("Отмена") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }

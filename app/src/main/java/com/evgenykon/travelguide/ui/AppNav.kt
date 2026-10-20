@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,6 +25,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.ui.auth.OpenRouterAuthScreen
 import com.evgenykon.travelguide.ui.auth.YandexAuthScreen
 import com.evgenykon.travelguide.ui.history.HistoryScreen
@@ -33,15 +36,15 @@ import com.evgenykon.travelguide.ui.settings.SettingsScreen
 
 private data class TabItem(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector
 )
 
 private val tabs = listOf(
-    TabItem("map", "Карта", Icons.Default.Map),
-    TabItem("routes", "Маршруты", Icons.Default.Route),
-    TabItem("history", "История", Icons.Default.History),
-    TabItem("settings", "Настройки", Icons.Default.Settings)
+    TabItem("map", R.string.common_map, Icons.Default.Map),
+    TabItem("routes", R.string.common_routes, Icons.Default.Route),
+    TabItem("history", R.string.common_history, Icons.Default.History),
+    TabItem("settings", R.string.common_settings, Icons.Default.Settings)
 )
 
 @Composable
@@ -67,8 +70,8 @@ fun AppNav(container: AppContainer) {
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
+                            icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
+                            label = { Text(stringResource(tab.labelRes)) }
                         )
                     }
                 }

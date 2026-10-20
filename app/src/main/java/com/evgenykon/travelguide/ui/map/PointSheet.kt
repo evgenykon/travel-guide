@@ -46,11 +46,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.data.repo.PlaceInfo
 import com.evgenykon.travelguide.util.MapPoi
+import com.evgenykon.travelguide.util.localizedCategory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -76,6 +81,11 @@ fun PointSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
+    val generatedText = stringResource(R.string.point_generated)
+    val defaultPointName = stringResource(R.string.point_default_name)
+    val unknownError = stringResource(R.string.common_unknown_error)
 
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
@@ -118,7 +128,7 @@ fun PointSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = if (point == null) "Новая точка" else "Точка",
+                text = if (point == null) stringResource(R.string.point_new) else stringResource(R.string.point_title),
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
@@ -129,7 +139,7 @@ fun PointSheet(
 
             if (!place?.address.isNullOrBlank()) {
                 Text(
-                    "Адрес: ${place?.address}",
+                    stringResource(R.string.map_address, place?.address.orEmpty()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -137,7 +147,7 @@ fun PointSheet(
 
             place?.location?.let { locationText ->
                 Text(
-                    "Город, страна: $locationText",
+                    stringResource(R.string.map_city_country, locationText),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -145,7 +155,7 @@ fun PointSheet(
 
             if (isVisited) {
                 Text(
-                    "Точка уже озвучена. Чтобы озвучить снова, удалите запись в «Истории».",
+                    stringResource(R.string.point_visited),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -154,14 +164,16 @@ fun PointSheet(
             poi?.let { objectPoi ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Объект OSM: ${objectPoi.name}" +
-                            (objectPoi.category?.let { " — $it" } ?: ""),
+                        stringResource(
+                            R.string.point_osm_object,
+                            objectPoi.name + (objectPoi.localizedCategory(locale)?.let { " — $it" } ?: "")
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { poi = null }) {
-                        Icon(Icons.Default.Close, contentDescription = "Убрать объект")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.point_remove_object))
                     }
                 }
             }
@@ -169,7 +181,7 @@ fun PointSheet(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Название") },
+                label = { Text(stringResource(R.string.point_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -177,7 +189,7 @@ fun PointSheet(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Описание") },
+                label = { Text(stringResource(R.string.point_description)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp)
@@ -205,12 +217,14 @@ fun PointSheet(
                                 .onSuccess {
                                     description = it
                                     statusIsError = false
-                                    statusMessage = "Описание сгенерировано"
+                                    statusMessage = generatedText
                                 }
                                 .onFailure {
                                     statusIsError = true
-                                    statusMessage =
-                                        "Ошибка генерации: ${it.message ?: "неизвестная"}"
+                                    statusMessage = context.getString(
+                                        R.string.point_generation_error,
+                                        it.message ?: unknownError
+                                    )
                                 }
                             generating = false
                         }
@@ -223,7 +237,7 @@ fun PointSheet(
                         Icon(Icons.Default.AutoAwesome, contentDescription = null)
                     }
                     Spacer(Modifier.width(6.dp))
-                    Text("Сгенерировать")
+                    Text(stringResource(R.string.point_generate))
                 }
                 OutlinedButton(
                     onClick = {
@@ -234,7 +248,10 @@ fun PointSheet(
                                 .onFailure {
                                     statusIsError = true
                                     statusMessage =
-                                        "Ошибка озвучки: ${it.message ?: "неизвестная"}"
+                                        context.getString(
+                                            R.string.point_speak_error,
+                                            it.message ?: unknownError
+                                        )
                                 }
                             speaking = false
                         }
@@ -247,12 +264,12 @@ fun PointSheet(
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                     }
                     Spacer(Modifier.width(6.dp))
-                    Text("Прослушать")
+                    Text(stringResource(R.string.point_speak))
                 }
             }
 
             Column {
-                Text("Радиус срабатывания: ${radiusMeters.roundToInt()} м")
+                Text(stringResource(R.string.point_radius, radiusMeters.roundToInt()))
                 Slider(
                     value = radiusMeters,
                     onValueChange = {
@@ -265,7 +282,7 @@ fun PointSheet(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Активна для слежения")
+                Text(stringResource(R.string.point_active))
                 Spacer(Modifier.weight(1f))
                 Switch(checked = enabled, onCheckedChange = { enabled = it })
             }
@@ -276,14 +293,14 @@ fun PointSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     val routeName = routes.firstOrNull { it.id == routeId }?.name
-                    Text(routeName ?: "Без маршрута")
+                    Text(routeName ?: stringResource(R.string.common_no_route))
                 }
                 DropdownMenu(
                     expanded = routeMenuExpanded,
                     onDismissRequest = { routeMenuExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Без маршрута") },
+                        text = { Text(stringResource(R.string.common_no_route)) },
                         onClick = {
                             routeId = null
                             routeMenuExpanded = false
@@ -304,7 +321,7 @@ fun PointSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (point != null) {
                     TextButton(onClick = { confirmDelete = true }) {
-                        Text("Удалить", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
                 Spacer(Modifier.weight(1f))
@@ -314,7 +331,7 @@ fun PointSheet(
                             PointEntity(
                                 id = point?.id ?: 0L,
                                 routeId = routeId,
-                                name = name.ifBlank { "Точка" },
+                                name = name.ifBlank { defaultPointName },
                                 lat = lat,
                                 lng = lng,
                                 description = description.trim(),
@@ -325,7 +342,7 @@ fun PointSheet(
                         )
                     }
                 ) {
-                    Text("Сохранить")
+                    Text(stringResource(R.string.common_save))
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -335,19 +352,19 @@ fun PointSheet(
     if (confirmDelete && point != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Удалить точку?") },
-            text = { Text("Точка «${point.name}» будет удалена.") },
+            title = { Text(stringResource(R.string.point_delete_confirm)) },
+            text = { Text(stringResource(R.string.point_delete_message, point.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     onDelete(point)
                 }) {
-                    Text("Удалить")
+                    Text(stringResource(R.string.common_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )

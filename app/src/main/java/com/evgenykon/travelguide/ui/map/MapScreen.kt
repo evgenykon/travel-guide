@@ -47,8 +47,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -58,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.db.PointEntity
 import com.evgenykon.travelguide.data.db.RouteEntity
 import com.evgenykon.travelguide.data.repo.PlaceInfo
@@ -66,6 +69,7 @@ import com.evgenykon.travelguide.tts.PlaybackState
 import com.evgenykon.travelguide.util.Geo
 import com.evgenykon.travelguide.util.MapPoi
 import com.evgenykon.travelguide.util.MapPoiExtractor
+import com.evgenykon.travelguide.util.localizedCategory
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
@@ -129,6 +133,10 @@ fun MapScreen(container: AppContainer, navController: NavController) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val mapLanguage = LocalConfiguration.current.locales[0].language
+    val addPointHintText = stringResource(R.string.map_add_point_hint)
+    val noDescriptionText = stringResource(R.string.map_no_description)
+    val ttsFailedText = stringResource(R.string.map_tts_failed)
 
     var hasPermission by remember { mutableStateOf(context.hasLocationPermission()) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -169,13 +177,16 @@ fun MapScreen(container: AppContainer, navController: NavController) {
 
     val styleUrl = settings.styleUrl
 
-    LaunchedEffect(mapView, styleUrl) {
+    LaunchedEffect(mapView, styleUrl, mapLanguage) {
         mapView.getMapAsync { map ->
             mapRef = map
             val styleBuilder = if (styleUrl.isBlank()) {
-                val json = context.assets.open("map_style.json")
+                var json = context.assets.open("map_style.json")
                     .bufferedReader()
                     .use { it.readText() }
+                if (mapLanguage != "ru") {
+                    json = json.replace("\"name:ru\"", "\"name:en\"")
+                }
                 Style.Builder().fromJson(json)
             } else {
                 Style.Builder().fromUri(styleUrl)
@@ -220,15 +231,15 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                     ?.getStringProperty(PROP_ID)
                     ?.toLongOrNull()
                 when {
-                    id != null -> vm.selectPoint(id, queryPoi(map, latLng))
+                    id != null -> vm.selectPoint(id, queryPoi(map, latLng, mapLanguage))
                     vm.createRequest.value != null ->
-                        vm.startCreate(latLng.latitude, latLng.longitude, queryPoi(map, latLng))
+                        vm.startCreate(latLng.latitude, latLng.longitude, queryPoi(map, latLng, mapLanguage))
                     else -> vm.selectPoint(null)
                 }
                 true
             }
             map.addOnMapLongClickListener { latLng ->
-                vm.startCreate(latLng.latitude, latLng.longitude, queryPoi(map, latLng))
+                vm.startCreate(latLng.latitude, latLng.longitude, queryPoi(map, latLng, mapLanguage))
                 true
             }
         }
@@ -368,18 +379,18 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                                 vm.startCreate(
                                     target.latitude,
                                     target.longitude,
-                                    mapRef?.let { queryPoi(it, target) }
+                                    mapRef?.let { queryPoi(it, target, mapLanguage) }
                                 )
                             } else {
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
-                                        "Нажмите и удерживайте карту, чтобы поставить точку"
+                                        addPointHintText
                                     )
                                 }
                             }
                         },
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                        text = { Text("Точка") }
+                        text = { Text(stringResource(R.string.common_point)) }
                     )
                     Spacer(Modifier.height(8.dp))
                     FloatingActionButton(
@@ -393,7 +404,7 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                             }
                         }
                     ) {
-                        Icon(Icons.Default.MyLocation, contentDescription = "Моё местоположение")
+                        Icon(Icons.Default.MyLocation, contentDescription = stringResource(R.string.map_my_location))
                     }
                 }
             }
@@ -434,13 +445,13 @@ fun MapScreen(container: AppContainer, navController: NavController) {
                                 val text = calloutPoint.description
                                 if (text.isBlank()) {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("У точки нет описания")
+                                        snackbarHostState.showSnackbar(noDescriptionText)
                                     }
                                 } else {
                                     scope.launch {
                                         vm.speak(text).onFailure {
                                             snackbarHostState.showSnackbar(
-                                                it.message ?: "Не удалось озвучить"
+                                                it.message ?: ttsFailedText
                                             )
                                         }
                                     }
@@ -516,10 +527,10 @@ fun MapScreen(container: AppContainer, navController: NavController) {
     }
 }
 
-private fun queryPoi(map: MapLibreMap, latLng: LatLng): MapPoi? =
+private fun queryPoi(map: MapLibreMap, latLng: LatLng, language: String): MapPoi? =
     runCatching {
         val screenPoint = map.projection.toScreenLocation(latLng)
-        MapPoiExtractor.extract(map.queryRenderedFeatures(screenPoint))
+        MapPoiExtractor.extract(map.queryRenderedFeatures(screenPoint), language)
     }.getOrNull()
 
 @Composable
@@ -553,8 +564,8 @@ private fun PointCallout(
             )
             Text(
                 "OSM: " + (poi
-                    ?.let { listOfNotNull(it.name, it.category).joinToString(" — ") }
-                    ?: "нет данных"),
+                    ?.let { listOfNotNull(it.name, it.localizedCategory(LocalConfiguration.current.locales[0])).joinToString(" — ") }
+                    ?: stringResource(R.string.map_no_data)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -567,7 +578,7 @@ private fun PointCallout(
             )
             place?.address?.takeIf { it.isNotBlank() }?.let { addressText ->
                 Text(
-                    "Адрес: $addressText",
+                    stringResource(R.string.map_address, addressText),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -576,7 +587,7 @@ private fun PointCallout(
             }
             place?.location?.let { locationText ->
                 Text(
-                    "Город, страна: $locationText",
+                    stringResource(R.string.map_city_country, locationText),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -585,9 +596,9 @@ private fun PointCallout(
             }
             Text(
                 when {
-                    elevationLoading -> "Высота: …"
-                    elevation != null -> "Высота: ${elevation.roundToInt()} м"
-                    else -> "Высота: нет данных"
+                    elevationLoading -> stringResource(R.string.map_elevation_loading)
+                    elevation != null -> stringResource(R.string.map_elevation_meters, elevation.roundToInt())
+                    else -> stringResource(R.string.map_elevation_none)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -600,18 +611,18 @@ private fun PointCallout(
                         } else {
                             Icons.Default.PlayArrow
                         },
-                        contentDescription = "Играть или пауза"
+                        contentDescription = stringResource(R.string.map_cd_play_pause)
                     )
                 }
                 IconButton(
                     onClick = onStop,
                     enabled = playbackState != PlaybackState.IDLE
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = "Остановить")
+                    Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.map_cd_stop))
                 }
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onEdit) {
-                    Text("Изменить")
+                    Text(stringResource(R.string.map_edit))
                 }
             }
         }
@@ -637,7 +648,7 @@ private fun PlaybackPill(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                label ?: "Озвучка",
+                label ?: stringResource(R.string.map_audio),
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -650,11 +661,11 @@ private fun PlaybackPill(
                     } else {
                         Icons.Default.PlayArrow
                     },
-                    contentDescription = "Играть или пауза"
+                    contentDescription = stringResource(R.string.map_cd_play_pause)
                 )
             }
             IconButton(onClick = onStop) {
-                Icon(Icons.Default.Stop, contentDescription = "Остановить")
+                Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.map_cd_stop))
             }
         }
     }
@@ -672,13 +683,13 @@ private fun RouteFilterChip(
         AssistChip(
             onClick = { expanded = true },
             label = {
-                Text(routes.firstOrNull { it.id == selectedId }?.name ?: "Все точки")
+                Text(routes.firstOrNull { it.id == selectedId }?.name ?: stringResource(R.string.common_all_points))
             },
             leadingIcon = { Icon(Icons.Default.Route, contentDescription = null) }
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Все точки") },
+                text = { Text(stringResource(R.string.common_all_points)) },
                 onClick = {
                     onSelect(null)
                     expanded = false

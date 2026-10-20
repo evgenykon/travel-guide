@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.network.ExchangeCodeRequest
 import com.evgenykon.travelguide.network.OpenRouterApi
 import kotlinx.coroutines.Dispatchers
@@ -24,8 +25,9 @@ class OpenRouterOAuth(private val api: OpenRouterApi) {
 
     suspend fun authorize(
         context: Context,
-        appLabel: String = "Solo Traveler’s Guide"
+        appLabel: String = ""
     ): AuthResult = withContext(Dispatchers.IO) {
+        val label = appLabel.ifBlank { context.getString(R.string.app_name) }
         val verifier = Pkce.generateVerifier()
         val challenge = Pkce.challenge(verifier)
         val server = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
@@ -37,17 +39,17 @@ class OpenRouterOAuth(private val api: OpenRouterApi) {
                 append("callback_url=").append(URLEncoder.encode(callback, "UTF-8"))
                 append("&code_challenge=").append(challenge)
                 append("&code_challenge_method=S256")
-                append("&key_label=").append(URLEncoder.encode(appLabel, "UTF-8"))
+                append("&key_label=").append(URLEncoder.encode(label, "UTF-8"))
             }
             withContext(Dispatchers.Main) { openBrowser(context, authUrl) }
-            val code = acceptCode(server)
-                ?: return@withContext AuthResult.Failure("Не удалось получить код авторизации")
+            val code = acceptCode(server, context)
+                ?: return@withContext AuthResult.Failure(context.getString(R.string.error_or_code))
             val response = api.exchangeCode(
                 ExchangeCodeRequest(code = code, codeVerifier = verifier)
             )
             AuthResult.Success(response.key)
         } catch (e: Exception) {
-            AuthResult.Failure(e.message ?: "Ошибка авторизации OpenRouter")
+            AuthResult.Failure(context.getString(R.string.error_or_auth))
         } finally {
             runCatching { server.close() }
         }
@@ -64,7 +66,7 @@ class OpenRouterOAuth(private val api: OpenRouterApi) {
         }
     }
 
-    private fun acceptCode(server: ServerSocket): String? {
+    private fun acceptCode(server: ServerSocket, context: Context): String? {
         server.accept().use { socket ->
             val reader = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
             val requestLine = reader.readLine() ?: return null
@@ -74,10 +76,10 @@ class OpenRouterOAuth(private val api: OpenRouterApi) {
             val body = """
                 <!doctype html>
                 <html>
-                <head><meta charset="utf-8"><title>Solo Traveler’s Guide</title></head>
+                <head><meta charset="utf-8"><title>${context.getString(R.string.app_name)}</title></head>
                 <body style="font-family:sans-serif;text-align:center;padding-top:15%">
-                <h2>Авторизация завершена</h2>
-                <p>Можно закрыть эту вкладку и вернуться в приложение.</p>
+                <h2>${context.getString(R.string.or_page_done_title)}</h2>
+                <p>${context.getString(R.string.or_page_done_text)}</p>
                 </body>
                 </html>
             """.trimIndent()

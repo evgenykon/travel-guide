@@ -22,12 +22,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.auth.OpenRouterOAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -93,10 +95,9 @@ fun OpenRouterAuthScreen(container: AppContainer) {
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("Подключено", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.common_connected), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Ключ создан через OAuth и хранится зашифрованным. " +
-                                    "Отозвать его можно на openrouter.ai/keys.",
+                                stringResource(R.string.or_connected_note),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -105,7 +106,7 @@ fun OpenRouterAuthScreen(container: AppContainer) {
                         onClick = { vm.disconnect() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Отключить")
+                        Text(stringResource(R.string.common_disconnect))
                     }
                 }
 
@@ -117,7 +118,7 @@ fun OpenRouterAuthScreen(container: AppContainer) {
                         CircularProgressIndicator(Modifier.size(36.dp))
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "Завершите вход в браузере и вернитесь в приложение…",
+                            stringResource(R.string.or_waiting),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -125,15 +126,14 @@ fun OpenRouterAuthScreen(container: AppContainer) {
 
                 else -> {
                     Text(
-                        "Вход выполняется на сайте OpenRouter. Приложение получит ключ " +
-                            "автоматически и сохранит его зашифрованным.",
+                        stringResource(R.string.or_login_note),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Button(
                         onClick = { vm.start(context) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Войти через OpenRouter")
+                        Text(stringResource(R.string.or_login))
                     }
                 }
             }
@@ -144,7 +144,7 @@ fun OpenRouterAuthScreen(container: AppContainer) {
                     onClick = { vm.start(context) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Повторить")
+                    Text(stringResource(R.string.common_retry))
                 }
             }
         }

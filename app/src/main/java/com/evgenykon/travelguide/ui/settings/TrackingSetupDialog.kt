@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -40,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.prefs.AppSettings
 import com.evgenykon.travelguide.location.ReadinessAction
 import com.evgenykon.travelguide.location.ReadinessItem
@@ -125,11 +127,11 @@ fun TrackingSetupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Настройка слежения") },
+        title = { Text(stringResource(R.string.tracking_setup_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    "Чтобы озвучка работала при выключенном экране, включите всё отмеченное ниже.",
+                    stringResource(R.string.tracking_setup_note),
                     style = MaterialTheme.typography.bodySmall
                 )
                 items.forEach { item ->
@@ -157,9 +159,9 @@ fun TrackingSetupDialog(
                                 .weight(1f)
                                 .padding(start = 10.dp)
                         ) {
-                            Text(item.title, style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(item.titleRes), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                item.description,
+                                stringResource(item.descriptionRes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -167,7 +169,7 @@ fun TrackingSetupDialog(
                         if (item.manual) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 TextButton(onClick = { handleAction(item) }) {
-                                    Text("Открыть")
+                                    Text(stringResource(R.string.common_open))
                                 }
                                 Checkbox(
                                     checked = item.satisfied,
@@ -182,7 +184,7 @@ fun TrackingSetupDialog(
                             }
                         } else if (!item.satisfied) {
                             TextButton(onClick = { handleAction(item) }) {
-                                Text("Открыть")
+                                Text(stringResource(R.string.common_open))
                             }
                         }
                     }
@@ -198,11 +200,11 @@ fun TrackingSetupDialog(
                 },
                 enabled = TrackingReadiness.canStart(items)
             ) {
-                Text("Включить слежение")
+                Text(stringResource(R.string.tracking_start))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }

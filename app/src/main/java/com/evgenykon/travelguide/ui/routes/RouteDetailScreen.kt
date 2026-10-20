@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.evgenykon.travelguide.AppContainer
+import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.data.db.PointEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -80,10 +82,10 @@ fun RouteDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(route?.name ?: "Маршрут") },
+                title = { Text(route?.name ?: stringResource(R.string.route_default)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
@@ -94,7 +96,7 @@ fun RouteDetailScreen(
                             launchSingleTop = true
                         }
                     }) {
-                        Icon(Icons.Default.Map, contentDescription = "Показать на карте")
+                        Icon(Icons.Default.Map, contentDescription = stringResource(R.string.route_show_on_map))
                     }
                 }
             )
@@ -109,7 +111,7 @@ fun RouteDetailScreen(
                     }
                 },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Добавить точку") }
+                text = { Text(stringResource(R.string.route_add_point)) }
             )
         }
     ) { padding ->
@@ -120,7 +122,7 @@ fun RouteDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("В маршруте пока нет точек", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.route_empty), style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             LazyColumn(
@@ -156,7 +158,7 @@ fun RouteDetailScreen(
                             IconButton(onClick = { vm.removeFromRoute(point) }) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "Убрать из маршрута"
+                                    contentDescription = stringResource(R.string.route_remove_point)
                                 )
                             }
                         }
