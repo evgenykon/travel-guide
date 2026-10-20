@@ -68,7 +68,7 @@ class SettingsStore(private val context: Context) {
         val routeFilter = prefs[KEY_ROUTE_FILTER] ?: AppSettings.NO_ROUTE_FILTER
         AppSettings(
             model = prefs[KEY_MODEL] ?: AppSettings.DEFAULT_MODEL,
-            voice = prefs[KEY_VOICE] ?: AppSettings.DEFAULT_VOICE,
+            voice = prefs[KEY_VOICE] ?: defaultVoice,
             speed = prefs[KEY_SPEED] ?: 1.0f,
             autoPlay = prefs[KEY_AUTOPLAY] ?: true,
             radiusMeters = prefs[KEY_RADIUS] ?: 10f,
@@ -104,6 +104,13 @@ class SettingsStore(private val context: Context) {
 
     val defaultPromptTemplate: String
         get() = context.getString(R.string.prompt_default)
+
+    private val defaultVoice: String
+        get() = if (context.resources.configuration.locales[0].language == "en") {
+            "john"
+        } else {
+            AppSettings.DEFAULT_VOICE
+        }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)

@@ -29,11 +29,12 @@ class TtsRepository(
     suspend fun listVoices(): List<VoiceDto> = runCatching {
         val token = auth.getIamToken()
         val voices = api.voices("Bearer $token").voices
-        val russian = voices.filter { voice ->
-            voice.languages.isEmpty() || voice.languages.any { it.startsWith("ru") }
+        val language = appLanguage()
+        val preferred = voices.filter { voice ->
+            voice.languages.isEmpty() || voice.languages.any { it.startsWith(language) }
         }
-        russian.ifEmpty { FALLBACK_VOICES }
-    }.getOrElse { FALLBACK_VOICES }
+        preferred.ifEmpty { voices }.ifEmpty { fallbackVoices() }
+    }.getOrElse { fallbackVoices() }
 
     suspend fun ensureAudio(text: String, voice: String, speed: Double): File =
         withContext(Dispatchers.IO) {
@@ -71,7 +72,13 @@ class TtsRepository(
     ): ResponseBody {
         val token = iamToken()
         return try {
-            api.synthesize("Bearer $token", text = text, voice = voice, speed = formatSpeed(speed))
+            api.synthesize(
+                "Bearer $token",
+                text = text,
+                voice = voice,
+                speed = formatSpeed(speed),
+                lang = languageTag()
+            )
         } catch (e: HttpException) {
             if (e.code() == 401) {
                 val fresh = iamToken(forceRefresh = true)
@@ -80,7 +87,8 @@ class TtsRepository(
                         "Bearer $fresh",
                         text = text,
                         voice = voice,
-                        speed = formatSpeed(speed)
+                        speed = formatSpeed(speed),
+                        lang = languageTag()
                     )
                 } catch (retry: HttpException) {
                     throw IllegalStateException(
@@ -113,7 +121,21 @@ class TtsRepository(
     private fun formatSpeed(speed: Double): String =
         String.format(Locale.US, "%.2f", speed)
 
+    private fun appLanguage(): String =
+        context.resources.configuration.locales[0].language
+
+    private fun languageTag(): String =
+        if (appLanguage() == "en") "en-US" else "ru-RU"
+
+    private fun fallbackVoices(): List<VoiceDto> =
+        if (appLanguage() == "en") FALLBACK_VOICES_EN else FALLBACK_VOICES
+
     companion object {
+        val FALLBACK_VOICES_EN: List<VoiceDto> = listOf(
+            VoiceDto("john", "MALE"),
+            VoiceDto("lea", "FEMALE")
+        )
+
         val FALLBACK_VOICES: List<VoiceDto> = listOf(
             VoiceDto("alena", "FEMALE"),
             VoiceDto("filipp", "MALE"),
