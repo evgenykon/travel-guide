@@ -47,10 +47,11 @@ stored locally on the device.
   and battery settings on Xiaomi/MIUI (with deep links to MIUI settings).
 - **Routes:** create, rename, delete, add and remove points.
 - **History:** zone entries and playback events, with re-play.
-- **Import/export:** routes and points with descriptions are saved to a JSON
-  file and can be restored on another device or after reinstalling. Settings
-  (prompt, OpenRouter model, voice, speed, radius and map style) are exported
-  separately.
+- **Import/export:** the Routes screen can export all routes to `routes-*.json`
+  or export a single route from its screen. Import merges routes and points with
+  existing data by name and coordinates, without duplicates. Settings (prompt,
+  OpenRouter model, voice, speed, radius and map style) are exported separately
+  as `settings-*.json`.
 - **Local storage:** Room (points, routes, history), DataStore (settings) and
   EncryptedSharedPreferences (keys and tokens). After reinstalling, points,
   routes and history are restored from Android auto-backup; keys are
@@ -244,10 +245,11 @@ Android-приложение-аудиогид: карта MapLibre, точки �
   точек.
 - **История:** входы в зоны и прослушивания с возможностью воспроизвести
   заново.
-- **Импорт/экспорт:** маршруты и точки с описаниями сохраняются в JSON-файл и
-  восстанавливаются на другом устройстве или после переустановки. Настройки
-  (промпт, модель OpenRouter, голос, скорость, радиус и стиль карты)
-  экспортируются отдельно.
+- **Импорт/экспорт:** на экране «Маршруты» можно экспортировать все маршруты в
+  `routes-*.json` или отдельный маршрут с его экрана. Импорт сравнивает данные
+  с имеющимися и добавляет маршруты и точки по имени и координатам, без
+  дубликатов. Настройки (промпт, модель OpenRouter, голос, скорость, радиус и
+  стиль карты) экспортируются отдельно в `settings-*.json`.
 - **Локальное хранение:** Room (точки, маршруты, история), DataStore
   (настройки), EncryptedSharedPreferences (ключи и токены). После переустановки
   точки, маршруты и история восстанавливаются из системного автобэкапа; ключи
