@@ -19,7 +19,7 @@ class Network {
     private val client = OkHttpClient.Builder()
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
-                .header("User-Agent", "EffTravelGuide/1.0 (Android; OSM data)")
+                .header("User-Agent", "SoloTravelersGuide/1.0 (Android; OSM data)")
                 .build()
             chain.proceed(request)
         }

@@ -74,7 +74,7 @@ class OpenRouterOAuth(private val api: OpenRouterApi) {
             val body = """
                 <!doctype html>
                 <html>
-                <head><meta charset="utf-8"><title>Travel Guide</title></head>
+                <head><meta charset="utf-8"><title>Solo Traveler’s Guide</title></head>
                 <body style="font-family:sans-serif;text-align:center;padding-top:15%">
                 <h2>Авторизация завершена</h2>
                 <p>Можно закрыть эту вкладку и вернуться в приложение.</p>
