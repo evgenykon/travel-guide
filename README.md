@@ -73,10 +73,26 @@ OpenRouter, маршруты и история. Всё хранится лока
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`.
 
+## Сайт (GitHub Pages)
+
+Промо-страница лежит в `site/` — статическая, без сборки: `index.html`,
+`styles.css`, `app.js`, графика и обложка для соцсетей. Два языка (EN/RU,
+переключатель в шапке, выбор запоминается), ссылки на релизы.
+
+Страница публикуется workflow `Deploy promo site` при изменениях в `site/`.
+Чтобы включить её один раз: **Settings → Pages → Build and deployment →
+Source: GitHub Actions**. Адрес: <https://evgenykon.github.io/travel-guide/>.
+
+Локальный просмотр:
+
+```bash
+python3 -m http.server 8099 --directory site
+```
+
 ## CI/CD (GitHub Actions)
 
 - **Push в `main`** → тесты, lint, debug APK (артефакт) и обновляемый
-  pre-release `dev-latest` с debug APK.
+  pre-release `dev-latest` с debug APK; изменения в `site/` деплоят сайт.
 - **Тег `vX.Y.Z`** → подписанный release APK и GitHub Release.
 
 ### Подписанные релизы

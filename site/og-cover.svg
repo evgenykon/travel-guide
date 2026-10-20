@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c231c"/>
+      <stop offset="0.55" stop-color="#10382c"/>
+      <stop offset="1" stop-color="#0a211a"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.8" cy="0.15" r="0.6">
+      <stop offset="0" stop-color="#35a065" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#35a065" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.1" cy="0.95" r="0.55">
+      <stop offset="0" stop-color="#00695c" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#00695c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7fe6b0"/>
+      <stop offset="0.55" stop-color="#4dd0c0"/>
+      <stop offset="1" stop-color="#8fc7ff"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2e9d63"/>
+      <stop offset="1" stop-color="#00695c"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glowA)"/>
+  <rect width="1200" height="630" fill="url(#glowB)"/>
+
+  <g stroke="#ffffff" stroke-opacity="0.05">
+    <path d="M0 110h1200M0 190h1200M0 270h1200M0 350h1200M0 430h1200M0 510h1200"/>
+    <path d="M90 0v630M210 0v630M330 0v630M450 0v630M570 0v630M690 0v630M810 0v630M930 0v630M1050 0v630M1170 0v630"/>
+  </g>
+
+  <g transform="translate(92 92)">
+    <rect width="72" height="72" rx="21" fill="url(#pin)"/>
+    <path d="M36 16c-8.6 0-15.6 7-15.6 15.6C20.4 43.3 36 60 36 60s15.6-16.7 15.6-28.4C51.6 23 44.6 16 36 16Zm0 21.2a5.6 5.6 0 1 1 0-11.2 5.6 5.6 0 0 1 0 11.2Z" fill="#fff"/>
+    <text x="94" y="47" fill="#f2f9f4" font-family="Inter, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="30" font-weight="700">Eff Travel Guide</text>
+  </g>
+
+  <text x="90" y="268" fill="#f2f9f4" font-family="Inter, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="62" font-weight="800" letter-spacing="-2">A guide that speaks</text>
+  <text x="90" y="338" fill="url(#accent)" font-family="Inter, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="62" font-weight="800" letter-spacing="-2">where you stand</text>
+
+  <text x="92" y="404" fill="#c3d8cc" font-family="Inter, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="26">Offline map · AI descriptions · voice narration within 10 metres</text>
+
+  <g transform="translate(92 452)" font-family="Inter, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="22" font-weight="600">
+    <rect width="176" height="52" rx="14" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="26" y="33" fill="#d8ede1">Android APK</text>
+    <rect x="192" width="150" height="52" rx="14" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="216" y="33" fill="#d8ede1">Free</text>
+    <rect x="358" width="196" height="52" rx="14" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="382" y="33" fill="#d8ede1">No account</text>
+  </g>
+
+  <g transform="translate(905 120)">
+    <circle cx="0" cy="0" r="230" fill="#4db6ac" fill-opacity="0.08"/>
+    <circle cx="0" cy="0" r="170" fill="#4db6ac" fill-opacity="0.07"/>
+    <circle cx="0" cy="0" r="108" fill="#2e7d32" fill-opacity="0.14" stroke="#4dd0c0" stroke-opacity="0.4" stroke-dasharray="8 10" stroke-width="2"/>
+    <path d="M-34 58c-9 0-16-7-16-16 0-13 16-32 16-32s16 19 16 32c0 9-7 16-16 16Z" fill="#3fbf7f"/>
+    <circle cy="40" r="6" fill="#0c231c"/>
+    <circle cx="-60" cy="-90" r="14" fill="none" stroke="#7fe6b0" stroke-opacity="0.5" stroke-width="2"/>
+    <circle cx="80" cy="-40" r="10" fill="none" stroke="#8fc7ff" stroke-opacity="0.65" stroke-width="2"/>
+    <circle cx="-86" cy="88" r="8" fill="none" stroke="#4dd0c0" stroke-opacity="0.6" stroke-width="2"/>
+    <path d="M-60-90 80-40M80-40-86 88" stroke="#ffffff" stroke-opacity="0.14" stroke-width="2" stroke-dasharray="5 8"/>
+  </g>
+</svg>
