@@ -1,5 +1,7 @@
 package com.evgenykon.travelguide.ui.routes
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,13 +25,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -63,6 +71,8 @@ class RouteDetailViewModel(
     fun removeFromRoute(point: PointEntity) {
         viewModelScope.launch { container.pointRepository.setRoute(point.id, null) }
     }
+
+    suspend fun exportJson(): String = container.backupRepository.exportJson(routeId)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,7 +89,31 @@ fun RouteDetailScreen(
     val route by vm.route.collectAsStateWithLifecycle()
     val points by vm.points.collectAsStateWithLifecycle()
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                runCatching {
+                    val json = vm.exportJson()
+                    context.contentResolver.openOutputStream(uri)?.use {
+                        it.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: error(context.getString(R.string.routes_file_open_error))
+                }.onSuccess {
+                    snackbarHostState.showSnackbar(context.getString(R.string.routes_export_done))
+                }.onFailure {
+                    snackbarHostState.showSnackbar(context.getString(R.string.routes_export_error))
+                }
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(route?.name ?: stringResource(R.string.route_default)) },
@@ -89,6 +123,11 @@ fun RouteDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        exportLauncher.launch(routeFileName(route?.name.orEmpty()))
+                    }) {
+                        Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.route_export_cd))
+                    }
                     IconButton(onClick = {
                         container.pendingRouteId.value = routeId
                         navController.navigate("map") {
@@ -167,4 +206,12 @@ fun RouteDetailScreen(
             }
         }
     }
+}
+
+private fun routeFileName(routeName: String): String {
+    val safe = routeName.trim()
+        .replace(Regex("[^\\p{L}\\p{N}]+"), "-")
+        .trim('-')
+        .take(40)
+    return "routes-" + safe.ifBlank { "route" } + "-" + System.currentTimeMillis() + ".json"
 }

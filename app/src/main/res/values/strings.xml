@@ -94,10 +94,7 @@
     <string name="settings_prompt_note">Подстановки: {name} — название точки, {address} — улица и дом, {object} — объект OSM под точкой, {hint} — текст поля «Описание». Также доступны {lat} и {lng}. Системная роль («экскурсовод, только достоверные факты») задана приложением.</string>
     <string name="settings_prompt_template">Шаблон промпта</string>
     <string name="settings_reset">Сбросить</string>
-    <string name="settings_data">Данные: импорт и экспорт</string>
-    <string name="settings_data_note">Сохраняет маршруты и точки (включая описания) в JSON-файл. Импорт добавляет данные и пропускает уже существующие точки.</string>
-    <string name="settings_export_routes">Экспорт маршрутов и точек</string>
-    <string name="settings_import_routes">Импорт маршрутов и точек</string>
+    <string name="settings_data">Настройки: импорт и экспорт</string>
     <string name="settings_backup_note">Настройки: промпт, модель OpenRouter, голос, скорость, радиус и стиль карты.</string>
     <string name="settings_export_settings">Экспорт настроек</string>
     <string name="settings_import_settings">Импорт настроек</string>
@@ -115,10 +112,6 @@
     <string name="settings_import_settings_error">Ошибка импорта настроек: %1$s</string>
     <string name="settings_file_open_error">Не удалось открыть файл</string>
     <string name="settings_file_read_error">Не удалось прочитать файл</string>
-    <string name="settings_export_done">Экспорт завершён</string>
-    <string name="settings_export_error">Ошибка экспорта</string>
-    <string name="settings_import_done">Импорт: маршрутов +%1$d, точек +%2$d, пропущено %3$d</string>
-    <string name="settings_import_error">Ошибка импорта: %1$s</string>
     <string name="settings_test_phrase">Привет! Это тест озвучки Solo Traveler’s Guide.</string>
     <string name="settings_size_zero">0 Б</string>
     <string name="settings_size_bytes">%1$d Б</string>
@@ -178,4 +171,14 @@
     <string name="ai_system_prompt">Ты — опытный экскурсовод и составитель путеводителей. Используешь только проверенные факты. Категорически запрещено выдумывать имена, даты, события и связи; при отсутствии достоверных данных факт не упоминается.</string>
     <string name="voice_female">жен.</string>
     <string name="voice_male">муж.</string>
+    <string name="routes_menu_cd">Действия с маршрутами</string>
+    <string name="routes_import">Импорт маршрутов</string>
+    <string name="routes_export_all">Экспорт всех маршрутов</string>
+    <string name="route_export_cd">Экспорт маршрута</string>
+    <string name="routes_export_done">Маршруты экспортированы</string>
+    <string name="routes_export_error">Ошибка экспорта маршрутов</string>
+    <string name="routes_import_done">Импорт: маршрутов +%1$d, точек +%2$d, пропущено %3$d</string>
+    <string name="routes_import_error">Ошибка импорта маршрутов: %1$s</string>
+    <string name="routes_file_open_error">Не удалось открыть файл</string>
+    <string name="routes_file_read_error">Не удалось прочитать файл</string>
 </resources>

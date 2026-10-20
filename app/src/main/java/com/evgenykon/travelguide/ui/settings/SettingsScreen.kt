@@ -58,7 +58,6 @@ import androidx.navigation.NavController
 import com.evgenykon.travelguide.AppContainer
 import com.evgenykon.travelguide.R
 import com.evgenykon.travelguide.BuildConfig
-import com.evgenykon.travelguide.data.backup.ImportResult
 import com.evgenykon.travelguide.data.prefs.AppSettings
 import com.evgenykon.travelguide.location.TrackingService
 import com.evgenykon.travelguide.network.ModelDto
@@ -192,10 +191,6 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         messageState.value = text
     }
 
-    suspend fun exportJson(): String = container.backupRepository.exportJson()
-
-    suspend fun importJson(text: String): ImportResult = container.backupRepository.importJson(text)
-
     suspend fun exportSettingsJson(): String = container.settingsBackupRepository.exportJson()
 
     suspend fun importSettingsJson(text: String) = container.settingsBackupRepository.importJson(text)
@@ -288,57 +283,6 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                     snackbarHostState.showSnackbar(
                         context.getString(
                             R.string.settings_import_settings_error,
-                            it.message ?: context.getString(R.string.common_unknown_error)
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                runCatching {
-                    val json = vm.exportJson()
-                    context.contentResolver.openOutputStream(uri)?.use {
-                        it.write(json.toByteArray(Charsets.UTF_8))
-                    } ?: error(context.getString(R.string.settings_file_open_error))
-                }.onSuccess {
-                    snackbarHostState.showSnackbar(context.getString(R.string.settings_export_done))
-                }.onFailure {
-                    snackbarHostState.showSnackbar(context.getString(R.string.settings_export_error))
-                }
-            }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                runCatching {
-                    val text = context.contentResolver.openInputStream(uri)
-                        ?.bufferedReader()
-                        ?.use { it.readText() }
-                        ?: error(context.getString(R.string.settings_file_read_error))
-                    vm.importJson(text)
-                }.onSuccess { result ->
-                    snackbarHostState.showSnackbar(
-                        context.getString(
-                            R.string.settings_import_done,
-                            result.routesAdded,
-                            result.pointsAdded,
-                            result.pointsSkipped
-                        )
-                    )
-                }.onFailure {
-                    snackbarHostState.showSnackbar(
-                        context.getString(
-                            R.string.settings_import_error,
                             it.message ?: context.getString(R.string.common_unknown_error)
                         )
                     )
@@ -518,27 +462,6 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
 
             SettingsSection(stringResource(R.string.settings_data)) {
                 Text(
-                    stringResource(R.string.settings_data_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedButton(
-                    onClick = {
-                        exportLauncher.launch(
-                            "eff-travel-guide-${System.currentTimeMillis()}.json"
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.settings_export_routes))
-                }
-                OutlinedButton(
-                    onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.settings_import_routes))
-                }
-                Text(
                     stringResource(R.string.settings_backup_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -546,7 +469,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
                 OutlinedButton(
                     onClick = {
                         settingsExportLauncher.launch(
-                            "eff-travel-guide-settings-${System.currentTimeMillis()}.json"
+                            "settings-${System.currentTimeMillis()}.json"
                         )
                     },
                     modifier = Modifier.fillMaxWidth()

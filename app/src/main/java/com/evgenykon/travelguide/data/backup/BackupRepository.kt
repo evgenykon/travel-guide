@@ -24,8 +24,10 @@ class BackupRepository(private val context: Context, private val db: AppDatabase
     private val routeDao = db.routeDao()
     private val pointDao = db.pointDao()
 
-    suspend fun exportJson(): String {
-        val routes = routeDao.getAll()
+    suspend fun exportJson(routeId: Long? = null): String {
+        val routes = routeDao.getAll().let { all ->
+            if (routeId == null) all else all.filter { it.id == routeId }
+        }
         val points = pointDao.getAll()
         val backup = BackupFile(
             routes = routes.map { route ->
@@ -35,7 +37,11 @@ class BackupRepository(private val context: Context, private val db: AppDatabase
                     points = points.filter { it.routeId == route.id }.map { it.toBackup() }
                 )
             },
-            points = points.filter { it.routeId == null }.map { it.toBackup() }
+            points = if (routeId == null) {
+                points.filter { it.routeId == null }.map { it.toBackup() }
+            } else {
+                emptyList()
+            }
         )
         return json.encodeToString(BackupFile.serializer(), backup)
     }

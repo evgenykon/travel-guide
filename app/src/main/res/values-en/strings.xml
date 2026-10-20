@@ -94,10 +94,7 @@
     <string name="settings_prompt_note">Placeholders: {name} — point name, {address} — street and number, {object} — OSM object at the point, {hint} — the text of the Description field. {lat} and {lng} are also available. The system role (“tour guide, verified facts only”) is set by the app.</string>
     <string name="settings_prompt_template">Prompt template</string>
     <string name="settings_reset">Reset</string>
-    <string name="settings_data">Data: import and export</string>
-    <string name="settings_data_note">Saves routes and points (including descriptions) to a JSON file. Import adds data and skips points that already exist.</string>
-    <string name="settings_export_routes">Export routes and points</string>
-    <string name="settings_import_routes">Import routes and points</string>
+    <string name="settings_data">Settings: import and export</string>
     <string name="settings_backup_note">Settings include the prompt, OpenRouter model, voice, speed, radius and map style.</string>
     <string name="settings_export_settings">Export settings</string>
     <string name="settings_import_settings">Import settings</string>
@@ -115,10 +112,6 @@
     <string name="settings_import_settings_error">Settings import failed: %1$s</string>
     <string name="settings_file_open_error">Could not open the file</string>
     <string name="settings_file_read_error">Could not read the file</string>
-    <string name="settings_export_done">Export complete</string>
-    <string name="settings_export_error">Export failed</string>
-    <string name="settings_import_done">Imported: +%1$d routes, +%2$d points, %3$d skipped</string>
-    <string name="settings_import_error">Import failed: %1$s</string>
     <string name="settings_test_phrase">Hello! This is a Solo Traveler’s Guide voice test.</string>
     <string name="settings_size_zero">0 B</string>
     <string name="settings_size_bytes">%1$d B</string>
@@ -178,4 +171,14 @@
     <string name="ai_system_prompt">You are an experienced tour guide and travel writer. Use only verified facts. Never invent names, dates, events or connections; if reliable data is missing, omit the fact.</string>
     <string name="voice_female">female</string>
     <string name="voice_male">male</string>
+    <string name="routes_menu_cd">Route actions</string>
+    <string name="routes_import">Import routes</string>
+    <string name="routes_export_all">Export all routes</string>
+    <string name="route_export_cd">Export route</string>
+    <string name="routes_export_done">Routes exported</string>
+    <string name="routes_export_error">Routes export failed</string>
+    <string name="routes_import_done">Imported: +%1$d routes, +%2$d points, %3$d skipped</string>
+    <string name="routes_import_error">Routes import failed: %1$s</string>
+    <string name="routes_file_open_error">Could not open the file</string>
+    <string name="routes_file_read_error">Could not read the file</string>
 </resources>
