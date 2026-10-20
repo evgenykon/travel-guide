@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Route editor — Solo Traveler’s Guide</title>
+  <meta name="description" content="Build routes in your browser: add points on the map, generate AI descriptions and export a JSON archive the Solo Traveler’s Guide app can import. No server, no sign-up.">
+  <meta name="theme-color" content="#0e2a22">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body data-page="editor" class="editor-page">
+<a class="skip-link" href="#main" data-ru="Перейти к содержимому">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html" aria-label="Solo Traveler’s Guide">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="12" fill="url(#brandGrad2)"/>
+        <path d="M20 9c-4.6 0-8.3 3.7-8.3 8.3 0 6.2 8.3 15.4 8.3 15.4s8.3-9.2 8.3-15.4C28.3 12.7 24.6 9 20 9Zm0 11.2a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8Z" fill="#fff"/>
+        <defs>
+          <linearGradient id="brandGrad2" x1="0" y1="0" x2="40" y2="40">
+            <stop stop-color="#2e9d63"/><stop offset="1" stop-color="#00695c"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span>Solo Traveler’s Guide</span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="index.html#features" data-ru="Возможности">Features</a>
+      <a href="index.html#how" data-ru="Как это работает">How it works</a>
+      <a href="index.html#download" data-ru="Скачать">Download</a>
+      <a href="index.html#faq" data-ru="Вопросы">FAQ</a>
+    </nav>
+    <div class="header-actions">
+      <div class="lang-switch" role="group" aria-label="Language / Язык">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="ru" aria-pressed="false">RU</button>
+      </div>
+      <a class="btn btn-small btn-primary" href="https://github.com/evgenykon/travel-guide/releases" data-ru="Скачать APK">Get APK</a>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="editor-main">
+  <div class="editor-page-head">
+    <div>
+      <p class="eyebrow" data-ru="Конструктор маршрутов">Route editor</p>
+      <h1 data-ru="Маршруты в браузере">Routes in your browser</h1>
+    </div>
+    <p class="editor-page-sub" data-ru="Добавляйте точки на карту, генерируйте описания и скачивайте JSON-архив, который импортируется в приложение. Всё работает в браузере, без сервера.">
+      Add points on the map, generate descriptions and download a JSON archive the app can import.
+      Everything runs in the browser, with no server.
+    </p>
+  </div>
+
+<div class="editor-shell" id="editor-shell">
+        <aside class="editor-side">
+          <div class="editor-toolbar">
+            <button type="button" class="ed-btn ed-btn-primary" id="ed-add-point">+&nbsp;<span data-ru="Точка">Point</span></button>
+            <button type="button" class="ed-btn" id="ed-add-route">+&nbsp;<span data-ru="Маршрут">Route</span></button>
+            <button type="button" class="ed-btn ed-btn-icon" id="ed-open-settings" title="API" aria-label="API settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.6v2M12 18.4v2M20.4 12h-2M5.6 12h-2M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4M17.9 17.9l-1.4-1.4M7.5 7.5 6.1 6.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+
+          <div class="editor-block">
+            <p class="editor-block-title"><span data-ru="Маршруты">Routes</span><span class="editor-counter" id="ed-route-count">0</span></p>
+            <ul class="editor-list" id="ed-routes"></ul>
+          </div>
+
+          <div class="editor-block editor-block-grow">
+            <p class="editor-block-title"><span data-ru="Точки">Points</span><span class="editor-counter" id="ed-point-count">0</span></p>
+            <ul class="editor-list" id="ed-points"></ul>
+          </div>
+
+          <div class="editor-archive">
+            <p class="editor-block-title"><span data-ru="Архив">Archive</span><span class="editor-counter" id="ed-stats"></span></p>
+            <div class="editor-archive-actions">
+              <button type="button" class="ed-btn" id="ed-export">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-ru="Скачать JSON">Download JSON</span>
+              </button>
+              <button type="button" class="ed-btn" id="ed-import">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9m0 0 4 4m-4-4-4 4M4 5h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-ru="Импорт">Import</span>
+              </button>
+              <button type="button" class="ed-btn ed-btn-danger-ghost" id="ed-clear" data-ru="Очистить">Clear</button>
+            </div>
+            <input type="file" id="ed-file" accept=".json,application/json,text/plain" hidden>
+            <p class="editor-fineprint" data-ru="Формат совместим с приложением: Настройки → Экспорт и импорт маршрутов.">
+              Compatible with the app: Settings → Export and import routes.
+            </p>
+          </div>
+        </aside>
+
+        <div class="editor-stage">
+          <div id="ed-map" class="editor-map"></div>
+          <div class="editor-map-hint" id="ed-hint" hidden>
+            <span data-ru="Кликните на карту, чтобы поставить точку">Click the map to place a point</span>
+          </div>
+          <button type="button" class="editor-map-empty" id="ed-empty">
+            <strong data-ru="Начните с точки на карте">Start with a point on the map</strong>
+            <span data-ru="Или импортируйте JSON-архив из приложения.">Or import a JSON archive from the app.</span>
+          </button>
+
+          <form class="point-card" id="ed-point-card" hidden autocomplete="off">
+            <div class="point-card-head">
+              <span class="point-card-kicker" data-ru="Точка маршрута">Route point</span>
+              <button type="button" class="ed-close" id="ed-pc-close" aria-label="Close">×</button>
+            </div>
+
+            <label class="ed-label">
+              <span data-ru="Название">Name</span>
+              <input type="text" id="ed-pc-name" maxlength="200">
+            </label>
+
+            <div class="point-card-row">
+              <label class="ed-label">
+                <span data-ru="Маршрут">Route</span>
+                <select id="ed-pc-route"></select>
+              </label>
+              <label class="ed-check">
+                <input type="checkbox" id="ed-pc-enabled" checked>
+                <span data-ru="Включена">Enabled</span>
+              </label>
+            </div>
+
+            <label class="ed-label ed-radius">
+              <span><span data-ru="Радиус срабатывания">Trigger radius</span><output id="ed-pc-radius-value">10 m</output></span>
+              <input type="range" id="ed-pc-radius" min="5" max="100" step="1" value="10">
+            </label>
+
+            <p class="point-card-place" id="ed-pc-place"></p>
+            <p class="point-card-object" id="ed-pc-object"></p>
+
+            <label class="ed-label">
+              <span data-ru="Описание">Description</span>
+              <textarea id="ed-pc-desc" rows="6" spellcheck="true"></textarea>
+            </label>
+
+            <div class="point-card-actions">
+              <button type="button" class="ed-btn ed-btn-primary" id="ed-pc-generate">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.4l-1.8-4.9L5 9.7l5.2-1.8L12 3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <span data-ru="Сгенерировать">Generate</span>
+              </button>
+              <button type="button" class="ed-btn ed-btn-danger" id="ed-pc-delete" data-ru="Удалить">Delete</button>
+            </div>
+            <p class="point-card-status" id="ed-pc-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+
+</main>
+
+<dialog class="api-dialog" id="ed-api-dialog">
+  <form method="dialog" class="api-panel">
+    <div class="api-panel-head">
+      <div>
+        <p class="api-kicker">API</p>
+        <h3 data-ru="Настройки генерации">Generation settings</h3>
+      </div>
+      <button type="submit" class="ed-close" value="cancel" aria-label="Close">×</button>
+    </div>
+
+    <p class="api-status" id="ed-key-status"></p>
+
+    <label class="ed-label">
+      <span data-ru="Ключ OpenRouter">OpenRouter API key</span>
+      <span class="api-key-row">
+        <input type="password" id="ed-key" placeholder="sk-or-v1-…" autocomplete="off" spellcheck="false">
+        <button type="button" class="ed-btn ed-btn-icon" id="ed-key-toggle" aria-label="Show key">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+        </button>
+      </span>
+    </label>
+    <p class="editor-fineprint" data-ru="Ключ уходит только на openrouter.ai. Управлять ключами можно в личном кабинете OpenRouter.">
+      The key is sent only to openrouter.ai. Manage your keys in the OpenRouter dashboard.
+    </p>
+
+    <label class="ed-label">
+      <span data-ru="Модель">Model</span>
+      <input type="text" id="ed-model" list="ed-model-list" placeholder="openai/gpt-4o-mini" spellcheck="false" autocomplete="off">
+      <datalist id="ed-model-list"></datalist>
+    </label>
+
+    <label class="ed-label">
+      <span data-ru="Шаблон промпта">Prompt template</span>
+      <textarea id="ed-prompt" rows="11" spellcheck="false"></textarea>
+    </label>
+
+    <div class="api-actions">
+      <button type="button" class="ed-btn ed-btn-primary" id="ed-key-save" data-ru="Сохранить в сессию">Save for this session</button>
+      <button type="button" class="ed-btn" id="ed-key-forget" data-ru="Забыть ключ">Forget key</button>
+      <button type="button" class="ed-btn ed-btn-danger-ghost" id="ed-prompt-reset" data-ru="Сбросить промпт">Reset prompt</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="mini-dialog" id="ed-route-dialog">
+  <form method="dialog" class="mini-panel">
+    <h3 id="ed-route-dialog-title" data-ru="Новый маршрут">New route</h3>
+    <label class="ed-label">
+      <span data-ru="Название маршрута">Route name</span>
+      <input type="text" id="ed-route-name" maxlength="120">
+    </label>
+    <div class="mini-actions">
+      <button type="button" class="ed-btn" id="ed-route-cancel" data-ru="Отмена">Cancel</button>
+      <button type="button" class="ed-btn ed-btn-primary" id="ed-route-save" data-ru="Создать">Create</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="editor-toast" id="ed-toast" role="status" aria-live="polite"></div>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="12" fill="#2e7d32"/>
+        <path d="M20 9c-4.6 0-8.3 3.7-8.3 8.3 0 6.2 8.3 15.4 8.3 15.4s8.3-9.2 8.3-15.4C28.3 12.7 24.6 9 20 9Zm0 11.2a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8Z" fill="#fff"/>
+      </svg>
+      <div>
+        <p class="footer-title">Solo Traveler’s Guide</p>
+        <p class="footer-note" data-ru="Гид, комментирующий места, которые вы проходите.">A guide that speaks where you stand.</p>
+      </div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html" data-ru="Главная">Home</a>
+      <a href="https://github.com/evgenykon/travel-guide/releases" target="_blank" rel="noopener" data-ru="Релизы">Releases</a>
+      <a href="https://github.com/evgenykon/travel-guide" target="_blank" rel="noopener" data-ru="GitHub">GitHub</a>
+      <a href="https://github.com/evgenykon/travel-guide/blob/main/README.md" target="_blank" rel="noopener" data-ru="Документация">Docs</a>
+    </nav>
+  </div>
+  <div class="wrap footer-bottom">
+    <p>© <span id="year">2026</span> Solo Traveler’s Guide. <span data-ru="Не связано с OpenStreetMap, OpenFreeMap, Yandex или OpenRouter.">Not affiliated with OpenStreetMap, OpenFreeMap, Yandex or OpenRouter.</span></p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="app.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

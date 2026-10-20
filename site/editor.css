@@ -1,11 +1,46 @@
-/* ---------- Route editor ---------- */
+/* ---------- Route editor page ---------- */
 
-.section-editor {
-  position: relative;
+.editor-page {
+  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(760px 380px at 12% 0%, #eaf4ec, transparent 70%),
     var(--bg);
-  border-top: 1px solid var(--line);
+}
+
+.editor-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: calc(100vh - 68px);
+  min-height: calc(100dvh - 68px);
+  padding: 18px 18px 22px;
+}
+
+.editor-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 32px;
+  flex-wrap: wrap;
+  padding: 0 2px;
+}
+.editor-page-head h1 {
+  font-size: clamp(1.45rem, 2.4vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  margin-top: 5px;
+}
+.editor-page-sub {
+  max-width: 62ch;
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+.editor-page .editor-shell {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 540px;
 }
 
 .editor-shell {
@@ -287,14 +322,24 @@
   align-items: center;
   gap: 6px;
   padding: 22px 26px;
+  font: inherit;
   text-align: center;
   color: var(--ink-soft);
-  background: rgba(255, 255, 255, .93);
+  background: rgba(255, 255, 255, .95);
   border: 1px solid rgba(255, 255, 255, .9);
   border-radius: 16px;
   box-shadow: 0 12px 34px rgba(16, 33, 27, .16);
-  pointer-events: none;
-  transition: opacity .2s ease;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.editor-map-empty:hover {
+  transform: translate(-50%, -50%) scale(1.02);
+  border-color: #cfe3d6;
+  box-shadow: 0 16px 40px rgba(16, 33, 27, .22);
+}
+.editor-map-empty:focus-visible {
+  outline: 3px solid rgba(46, 125, 50, .35);
+  outline-offset: 2px;
 }
 .editor-map-empty strong { font-size: .95rem; }
 .editor-map-empty span { font-size: .78rem; color: var(--muted); }
@@ -606,6 +651,9 @@ dialog::backdrop {
     grid-template-columns: 1fr;
     height: auto;
   }
+  .editor-main { min-height: 0; padding: 12px; }
+  .editor-page .editor-shell { flex: none; min-height: 0; }
+  .editor-page .editor-stage { height: 50vh; min-height: 330px; }
   .editor-side {
     border-right: 0;
     border-top: 1px solid var(--line);

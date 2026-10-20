@@ -186,7 +186,8 @@
     points: [],
     selectedRouteId: null,
     selectedPointId: null,
-    addMode: false
+    addMode: false,
+    emptyDismissed: false
   };
   var api = { key: "", model: DEFAULT_MODEL, prompt: "", session: false };
   var map = null;
@@ -767,7 +768,7 @@
     $("ed-route-count").textContent = String(state.routes.length);
     $("ed-point-count").textContent = String(state.points.length);
     $("ed-stats").textContent = t("stat", { points: state.points.length, routes: state.routes.length });
-    $("ed-empty").hidden = state.points.length > 0 || state.addMode;
+    $("ed-empty").hidden = state.points.length > 0 || state.addMode || state.emptyDismissed;
   }
 
   function renderAll() {
@@ -997,6 +998,7 @@
     state.points = [];
     state.selectedRouteId = null;
     state.selectedPointId = null;
+    state.emptyDismissed = false;
     $("ed-point-card").hidden = true;
     renderAll();
     toast(t("cleared"));
@@ -1074,6 +1076,11 @@
 
   function bindEvents() {
     $("ed-add-point").addEventListener("click", function () { setAddMode(!state.addMode); });
+    $("ed-empty").addEventListener("click", function () {
+      state.emptyDismissed = true;
+      updateCounts();
+      setAddMode(true);
+    });
     $("ed-add-route").addEventListener("click", function () { openRouteDialog("create"); });
     $("ed-open-settings").addEventListener("click", openApiDialog);
 

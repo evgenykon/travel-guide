@@ -79,8 +79,8 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 `styles.css`, `app.js`, графика и обложка для соцсетей. Два языка (EN/RU,
 переключатель в шапке, выбор запоминается), ссылки на релизы.
 
-Внизу страницы — **конструктор маршрутов** без бэкенда (`editor.js`,
-`editor.css`):
+Отдельная страница `site/editor.html` — **конструктор маршрутов** без бэкенда
+(`editor.js`, `editor.css`, карта на всю ширину экрана):
 
 - карта MapLibre GL JS + OpenFreeMap, тот же стиль, что в приложении
   (`site/map_style.json`);

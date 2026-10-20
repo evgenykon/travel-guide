@@ -15,8 +15,20 @@
     }
   };
 
+  var EDITOR_META = {
+    en: {
+      title: "Route editor — Solo Traveler’s Guide",
+      description: "Build routes in your browser: add points on the map, generate AI descriptions and download a JSON archive the app can import."
+    },
+    ru: {
+      title: "Конструктор маршрутов — Solo Traveler’s Guide",
+      description: "Собирайте маршруты в браузере: точки на карте, описания от ИИ и JSON-архив, который импортируется в приложение."
+    }
+  };
+
   var release = null;
   var currentLang = "en";
+  var isEditorPage = document.body && document.body.getAttribute("data-page") === "editor";
 
   function detectLang() {
     var query = new URLSearchParams(window.location.search).get("lang");
@@ -33,7 +45,7 @@
     currentLang = lang;
     document.documentElement.lang = lang;
 
-    var meta = META[lang];
+    var meta = (isEditorPage ? EDITOR_META : META)[lang];
     document.title = meta.title;
     var desc = document.querySelector('meta[name="description"]');
     if (desc) desc.setAttribute("content", meta.description);
@@ -102,6 +114,7 @@
   }
 
   function loadRelease() {
+    if (!document.getElementById("latest-version")) return;
     fetch("https://api.github.com/repos/" + REPO + "/releases?per_page=20", {
       headers: { Accept: "application/vnd.github+json" }
     })
