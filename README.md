@@ -1,4 +1,4 @@
-# Eff Travel Guide
+# Solo Traveler’s Guide
 
 Android-приложение: карта MapLibre, точки с описаниями, автоматическая озвучка
 (Yandex SpeechKit) при входе в 10-метровую зону, генерация описаний через

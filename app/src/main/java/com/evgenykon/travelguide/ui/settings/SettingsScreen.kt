@@ -175,7 +175,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         val current = settings.value
         viewModelScope.launch {
             container.ttsRepository
-                .speak("Привет! Это тест озвучки Eff Travel Guide.", current.voice, current.speed.toDouble())
+                .speak("Привет! Это тест озвучки Solo Traveler’s Guide.", current.voice, current.speed.toDouble())
                 .onFailure { messageState.value = it.message ?: "Не удалось озвучить" }
         }
     }
@@ -541,7 +541,7 @@ fun SettingsScreen(container: AppContainer, navController: NavController) {
             }
 
             SettingsSection("О приложении") {
-                Text("Eff Travel Guide ${BuildConfig.VERSION_NAME}")
+                Text("Solo Traveler’s Guide ${BuildConfig.VERSION_NAME}")
                 Text(
                     "MapLibre · Yandex SpeechKit · OpenRouter",
                     style = MaterialTheme.typography.bodySmall,

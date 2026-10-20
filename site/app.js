@@ -6,11 +6,11 @@
 
   var META = {
     en: {
-      title: "Eff Travel Guide — an audio guide that speaks where you stand",
+      title: "Solo Traveler’s Guide — an audio guide that speaks where you stand",
       description: "Android travel companion: offline map, AI-written descriptions and automatic voice narration when you come within 10 metres of a point. Your data stays on your device."
     },
     ru: {
-      title: "Eff Travel Guide — гид, комментирующий места, которые вы проходите",
+      title: "Solo Traveler’s Guide — гид, комментирующий места, которые вы проходите",
       description: "Android-путеводитель: офлайн-карта, описания от ИИ и автоматическая озвучка при входе в 10-метровый радиус точки. Данные остаются на устройстве."
     }
   };

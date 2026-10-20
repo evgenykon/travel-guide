@@ -228,7 +228,7 @@ object TrackingReadiness {
                 )
             ).apply {
                 putExtra("package_name", context.packageName)
-                putExtra("package_label", "Eff Travel Guide")
+                putExtra("package_label", "Solo Traveler’s Guide")
             },
             Intent().setComponent(
                 ComponentName(
