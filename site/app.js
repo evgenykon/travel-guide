@@ -54,6 +54,8 @@
 
     try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* ignore */ }
 
+    document.dispatchEvent(new CustomEvent("etg:lang", { detail: { lang: lang } }));
+
     renderRelease();
   }
 

@@ -79,6 +79,23 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 `styles.css`, `app.js`, графика и обложка для соцсетей. Два языка (EN/RU,
 переключатель в шапке, выбор запоминается), ссылки на релизы.
 
+Внизу страницы — **конструктор маршрутов** без бэкенда (`editor.js`,
+`editor.css`):
+
+- карта MapLibre GL JS + OpenFreeMap, тот же стиль, что в приложении
+  (`site/map_style.json`);
+- добавление точек кликом по карте и перетаскиванием, маршруты, фильтр по
+  маршруту, радиус срабатывания, автоопределение адреса (Nominatim) и
+  OSM-объекта под точкой;
+- генерация описаний через OpenRouter: модель, шаблон промпта и ключ задаются
+  в шторке «API». Ключ живёт в памяти страницы; по кнопке его можно сохранить
+  в `sessionStorage` вкладки (переживает перезагрузку, исчезает при закрытии
+  вкладки). Ключ отправляется только на `openrouter.ai`;
+- экспорт и импорт JSON-архива в формате `BackupFile` приложения
+  (`version: 1`, маршруты + точки): импорт сливается по имени и координатам,
+  как это делает приложение;
+- всё выполняется в браузере, серверной части нет.
+
 Страница публикуется workflow `Deploy promo site` при изменениях в `site/`.
 Чтобы включить её один раз: **Settings → Pages → Build and deployment →
 Source: GitHub Actions**. Адрес: <https://evgenykon.github.io/travel-guide/>.
@@ -127,7 +144,7 @@ git push origin v1.0.0
 
 ## Технологии
 
-Kotlin · Jetpack Compose · MapLibre Native · Room · DataStore ·
+Kotlin · Jetpack Compose · MapLibre Native · MapLibre GL JS · Room · DataStore ·
 Retrofit/OkHttp · kotlinx.serialization · Play Services Location ·
 Yandex SpeechKit v1 TTS + v3 voices · OpenRouter API · OpenFreeMap ·
-Open-Meteo Elevation · GitHub Actions
+Nominatim · Open-Meteo Elevation · GitHub Actions

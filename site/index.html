@@ -7,7 +7,9 @@
   <meta name="description" content="Android travel companion: offline map, AI-written descriptions and automatic voice narration when you come within 10 metres of a point. Your data stays on your device.">
   <meta name="theme-color" content="#0e2a22">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="editor.css">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Solo Traveler’s Guide — an audio guide that speaks where you stand">
   <meta property="og:description" content="Offline map, AI descriptions and automatic narration within 10 metres. Free Android APK.">
@@ -35,6 +37,7 @@
     <nav class="nav" aria-label="Main">
       <a href="#features" data-ru="Возможности">Features</a>
       <a href="#how" data-ru="Как это работает">How it works</a>
+      <a href="#editor" data-ru="Конструктор">Editor</a>
       <a href="#download" data-ru="Скачать">Download</a>
       <a href="#faq" data-ru="Вопросы">FAQ</a>
     </nav>
@@ -281,6 +284,115 @@
     </div>
   </section>
 
+  <section class="section section-editor" id="editor">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" data-ru="Конструктор маршрутов">Route editor</p>
+        <h2 data-ru="Соберите маршрут и загрузите его в приложение">Build a route and load it into the app</h2>
+        <p class="section-sub" data-ru="Карта, точки, описания от ИИ и архивы в формате приложения. Всё работает прямо в браузере — без сервера и регистрации.">
+          Map, points, AI descriptions and archives in the app’s own format. Everything runs in your browser — no server, no sign-up.
+        </p>
+      </div>
+
+      <div class="editor-shell" id="editor-shell">
+        <aside class="editor-side">
+          <div class="editor-toolbar">
+            <button type="button" class="ed-btn ed-btn-primary" id="ed-add-point">+&nbsp;<span data-ru="Точка">Point</span></button>
+            <button type="button" class="ed-btn" id="ed-add-route">+&nbsp;<span data-ru="Маршрут">Route</span></button>
+            <button type="button" class="ed-btn ed-btn-icon" id="ed-open-settings" title="API" aria-label="API settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.6v2M12 18.4v2M20.4 12h-2M5.6 12h-2M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4M17.9 17.9l-1.4-1.4M7.5 7.5 6.1 6.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+
+          <div class="editor-block">
+            <p class="editor-block-title"><span data-ru="Маршруты">Routes</span><span class="editor-counter" id="ed-route-count">0</span></p>
+            <ul class="editor-list" id="ed-routes"></ul>
+          </div>
+
+          <div class="editor-block editor-block-grow">
+            <p class="editor-block-title"><span data-ru="Точки">Points</span><span class="editor-counter" id="ed-point-count">0</span></p>
+            <ul class="editor-list" id="ed-points"></ul>
+          </div>
+
+          <div class="editor-archive">
+            <p class="editor-block-title"><span data-ru="Архив">Archive</span><span class="editor-counter" id="ed-stats"></span></p>
+            <div class="editor-archive-actions">
+              <button type="button" class="ed-btn" id="ed-export">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-ru="Скачать JSON">Download JSON</span>
+              </button>
+              <button type="button" class="ed-btn" id="ed-import">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9m0 0 4 4m-4-4-4 4M4 5h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-ru="Импорт">Import</span>
+              </button>
+              <button type="button" class="ed-btn ed-btn-danger-ghost" id="ed-clear" data-ru="Очистить">Clear</button>
+            </div>
+            <input type="file" id="ed-file" accept=".json,application/json,text/plain" hidden>
+            <p class="editor-fineprint" data-ru="Формат совместим с приложением: Настройки → Экспорт и импорт маршрутов.">
+              Compatible with the app: Settings → Export and import routes.
+            </p>
+          </div>
+        </aside>
+
+        <div class="editor-stage">
+          <div id="ed-map" class="editor-map"></div>
+          <div class="editor-map-hint" id="ed-hint" hidden>
+            <span data-ru="Кликните на карту, чтобы поставить точку">Click the map to place a point</span>
+          </div>
+          <div class="editor-map-empty" id="ed-empty">
+            <strong data-ru="Начните с точки на карте">Start with a point on the map</strong>
+            <span data-ru="Или импортируйте JSON-архив из приложения.">Or import a JSON archive from the app.</span>
+          </div>
+
+          <form class="point-card" id="ed-point-card" hidden autocomplete="off">
+            <div class="point-card-head">
+              <span class="point-card-kicker" data-ru="Точка маршрута">Route point</span>
+              <button type="button" class="ed-close" id="ed-pc-close" aria-label="Close">×</button>
+            </div>
+
+            <label class="ed-label">
+              <span data-ru="Название">Name</span>
+              <input type="text" id="ed-pc-name" maxlength="200">
+            </label>
+
+            <div class="point-card-row">
+              <label class="ed-label">
+                <span data-ru="Маршрут">Route</span>
+                <select id="ed-pc-route"></select>
+              </label>
+              <label class="ed-check">
+                <input type="checkbox" id="ed-pc-enabled" checked>
+                <span data-ru="Включена">Enabled</span>
+              </label>
+            </div>
+
+            <label class="ed-label ed-radius">
+              <span><span data-ru="Радиус срабатывания">Trigger radius</span><output id="ed-pc-radius-value">10 m</output></span>
+              <input type="range" id="ed-pc-radius" min="5" max="100" step="1" value="10">
+            </label>
+
+            <p class="point-card-place" id="ed-pc-place"></p>
+            <p class="point-card-object" id="ed-pc-object"></p>
+
+            <label class="ed-label">
+              <span data-ru="Описание">Description</span>
+              <textarea id="ed-pc-desc" rows="6" spellcheck="true"></textarea>
+            </label>
+
+            <div class="point-card-actions">
+              <button type="button" class="ed-btn ed-btn-primary" id="ed-pc-generate">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.4l-1.8-4.9L5 9.7l5.2-1.8L12 3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <span data-ru="Сгенерировать">Generate</span>
+              </button>
+              <button type="button" class="ed-btn ed-btn-danger" id="ed-pc-delete" data-ru="Удалить">Delete</button>
+            </div>
+            <p class="point-card-status" id="ed-pc-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="download">
     <div class="wrap">
       <div class="download-card">
@@ -362,6 +474,66 @@
     </div>
   </section>
 </main>
+<dialog class="api-dialog" id="ed-api-dialog">
+  <form method="dialog" class="api-panel">
+    <div class="api-panel-head">
+      <div>
+        <p class="api-kicker">API</p>
+        <h3 data-ru="Настройки генерации">Generation settings</h3>
+      </div>
+      <button type="submit" class="ed-close" value="cancel" aria-label="Close">×</button>
+    </div>
+
+    <p class="api-status" id="ed-key-status"></p>
+
+    <label class="ed-label">
+      <span data-ru="Ключ OpenRouter">OpenRouter API key</span>
+      <span class="api-key-row">
+        <input type="password" id="ed-key" placeholder="sk-or-v1-…" autocomplete="off" spellcheck="false">
+        <button type="button" class="ed-btn ed-btn-icon" id="ed-key-toggle" aria-label="Show key">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+        </button>
+      </span>
+    </label>
+    <p class="editor-fineprint" data-ru="Ключ уходит только на openrouter.ai. Управлять ключами можно в личном кабинете OpenRouter.">
+      The key is sent only to openrouter.ai. Manage your keys in the OpenRouter dashboard.
+    </p>
+
+    <label class="ed-label">
+      <span data-ru="Модель">Model</span>
+      <input type="text" id="ed-model" list="ed-model-list" placeholder="openai/gpt-4o-mini" spellcheck="false" autocomplete="off">
+      <datalist id="ed-model-list"></datalist>
+    </label>
+
+    <label class="ed-label">
+      <span data-ru="Шаблон промпта">Prompt template</span>
+      <textarea id="ed-prompt" rows="11" spellcheck="false"></textarea>
+    </label>
+
+    <div class="api-actions">
+      <button type="button" class="ed-btn ed-btn-primary" id="ed-key-save" data-ru="Сохранить в сессию">Save for this session</button>
+      <button type="button" class="ed-btn" id="ed-key-forget" data-ru="Забыть ключ">Forget key</button>
+      <button type="button" class="ed-btn ed-btn-danger-ghost" id="ed-prompt-reset" data-ru="Сбросить промпт">Reset prompt</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="mini-dialog" id="ed-route-dialog">
+  <form method="dialog" class="mini-panel">
+    <h3 id="ed-route-dialog-title" data-ru="Новый маршрут">New route</h3>
+    <label class="ed-label">
+      <span data-ru="Название маршрута">Route name</span>
+      <input type="text" id="ed-route-name" maxlength="120">
+    </label>
+    <div class="mini-actions">
+      <button type="button" class="ed-btn" id="ed-route-cancel" data-ru="Отмена">Cancel</button>
+      <button type="button" class="ed-btn ed-btn-primary" id="ed-route-save" data-ru="Создать">Create</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="editor-toast" id="ed-toast" role="status" aria-live="polite"></div>
+
 
 <footer class="site-footer">
   <div class="wrap footer-inner">
@@ -387,6 +559,8 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="app.js"></script>
+<script src="editor.js"></script>
 </body>
 </html>
