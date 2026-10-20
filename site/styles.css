@@ -280,6 +280,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   color: transparent;
 }
 
+html[lang="ru"] .hero h1 {
+  font-size: clamp(2rem, 4vw, 2.9rem);
+}
+
 .lead {
   font-size: clamp(1.02rem, 1.5vw, 1.15rem);
   color: #c3d8cc;
@@ -773,6 +777,7 @@ details p { padding: 0 0 20px; color: var(--muted); font-size: .94rem; max-width
   .brand span { display: none; }
   .btn-small { padding: 9px 12px; font-size: .78rem; }
   .hero h1 { font-size: clamp(2rem, 9vw, 2.7rem); }
+  html[lang="ru"] .hero h1 { font-size: 1.7rem; }
   .hero-facts { gap: 16px 20px; }
   .hero-facts strong { font-size: 1.1rem; }
   .hero-facts span { font-size: .75rem; }
